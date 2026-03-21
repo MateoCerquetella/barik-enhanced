@@ -1,8 +1,10 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct WidgetConfiguratorView: View {
     @ObservedObject var configManager = ConfigManager.shared
     @State private var activeWidgetIDs: [String] = []
+    @State private var isDropTargeted = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -38,6 +40,9 @@ struct WidgetConfiguratorView: View {
                                     withAnimation(.spring(duration: 0.3)) {
                                         activeWidgetIDs.append(widget.id)
                                     }
+                                }
+                                .onDrag {
+                                    NSItemProvider(object: widget.id as NSString)
                                 }
                             }
                         }
@@ -82,6 +87,23 @@ struct WidgetConfiguratorView: View {
                     }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
+                    .onDrop(of: [.text], isTargeted: $isDropTargeted) { providers in
+                        guard let provider = providers.first else { return false }
+                        provider.loadObject(ofClass: NSString.self) { string, _ in
+                            if let widgetID = string as? String {
+                                DispatchQueue.main.async {
+                                    withAnimation(.spring(duration: 0.3)) {
+                                        activeWidgetIDs.append(widgetID)
+                                    }
+                                }
+                            }
+                        }
+                        return true
+                    }
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(.blue.opacity(isDropTargeted ? 0.5 : 0), lineWidth: 2)
+                    )
                 }
                 .padding(20)
                 .frame(maxWidth: .infinity)
@@ -106,8 +128,7 @@ struct WidgetConfiguratorView: View {
 
                 Spacer()
 
-                Button("Save") {
-                    saveConfiguration()
+                Button("Done") {
                     dismiss()
                 }
                 .buttonStyle(.borderedProminent)
@@ -122,9 +143,12 @@ struct WidgetConfiguratorView: View {
         .onAppear {
             activeWidgetIDs = configManager.config.rootToml.widgets.displayed.map { $0.id }
         }
+        .onChange(of: activeWidgetIDs) { _, _ in
+            applyChanges()
+        }
     }
 
-    private func saveConfiguration() {
+    private func applyChanges() {
         // Build TOML array string
         let items = activeWidgetIDs.map { id -> String in
             return "\"\(id)\""
