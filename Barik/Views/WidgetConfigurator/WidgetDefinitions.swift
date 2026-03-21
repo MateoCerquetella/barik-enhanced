@@ -25,6 +25,9 @@ let allWidgets: [WidgetDefinition] = [
     WidgetDefinition(id: "default.pomodoro", name: "Pomodoro", icon: "timer", description: "Focus timer"),
     WidgetDefinition(id: "default.performance", name: "Performance", icon: "gauge.with.dots.needle.bottom.50percent", description: "Performance mode"),
     WidgetDefinition(id: "default.keyboardlayout", name: "Keyboard", icon: "keyboard", description: "Input source"),
+    WidgetDefinition(id: "default.claude-usage", name: "Claude Usage", icon: "sparkle", description: "Claude API rate limit tracking"),
+    WidgetDefinition(id: "default.codex-usage", name: "Codex Usage", icon: "terminal", description: "OpenAI Codex usage tracking"),
+    WidgetDefinition(id: "default.countdown", name: "Countdown", icon: "calendar.badge.clock", description: "Days until target date"),
     WidgetDefinition(id: "spacer", name: "Spacer", icon: "arrow.left.and.right", description: "Flexible space"),
     WidgetDefinition(id: "divider", name: "Divider", icon: "line.diagonal", description: "Visual separator"),
 ]

@@ -278,6 +278,58 @@ final class ConfigManager: ObservableObject {
         }
     }
 
+    func toggleWidget(_ widgetId: String) {
+        guard let path = configFilePath else { return }
+        do {
+            let content = try String(contentsOfFile: path, encoding: .utf8)
+            var displayedIds = config.rootToml.widgets.displayed.map(\.id)
+
+            if let index = displayedIds.firstIndex(of: widgetId) {
+                displayedIds.remove(at: index)
+            } else {
+                displayedIds.append(widgetId)
+            }
+
+            let widgetStrings = displayedIds.map { "\"\($0)\"" }
+            let arrayStr = "[\n    " + widgetStrings.joined(separator: ",\n    ") + "\n]"
+            let updated = replaceDisplayedWidgets(in: content, with: arrayStr)
+            try updated.write(toFile: path, atomically: true, encoding: .utf8)
+        } catch {
+            print("Error toggling widget: \(error)")
+        }
+    }
+
+    private func replaceDisplayedWidgets(in content: String, with newArray: String) -> String {
+        var lines = content.components(separatedBy: "\n")
+        var startIndex: Int?
+        var endIndex: Int?
+        var bracketCount = 0
+
+        for (i, line) in lines.enumerated() {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("displayed") && trimmed.contains("[") {
+                startIndex = i
+                bracketCount = trimmed.filter({ $0 == "[" }).count - trimmed.filter({ $0 == "]" }).count
+                if bracketCount <= 0 {
+                    endIndex = i
+                    break
+                }
+            } else if startIndex != nil && endIndex == nil {
+                bracketCount += trimmed.filter({ $0 == "[" }).count - trimmed.filter({ $0 == "]" }).count
+                if bracketCount <= 0 {
+                    endIndex = i
+                    break
+                }
+            }
+        }
+
+        if let start = startIndex, let end = endIndex {
+            lines.replaceSubrange(start...end, with: ["displayed = " + newArray])
+        }
+
+        return lines.joined(separator: "\n")
+    }
+
     func globalWidgetConfig(for widgetId: String) -> ConfigData {
         config.rootToml.widgets.config(for: widgetId) ?? [:]
     }

@@ -5,60 +5,54 @@ struct SettingsMenuView: View {
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Configure Widgets
-            SettingsMenuItem(icon: "square.grid.2x2", title: "Configure Widgets...") {
+        VStack(alignment: .leading, spacing: 2) {
+            SettingsMenuItem(icon: "square.grid.2x2", title: "Configure Widgets") {
                 WidgetConfiguratorWindow.show()
             }
 
-            Divider().background(.white.opacity(0.2)).padding(.vertical, 4)
-
             // Launch at Login
-            HStack(spacing: 10) {
-                Image(systemName: "power")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.white.opacity(0.7))
-                    .frame(width: 20)
-
-                Text("Launch at Login")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.white)
-
-                Spacer()
-
-                Toggle("", isOn: $launchAtLogin)
-                    .toggleStyle(.switch)
-                    .scaleEffect(0.7)
-                    .onChange(of: launchAtLogin) { _, newValue in
-                        do {
-                            if newValue {
-                                try SMAppService.mainApp.register()
-                            } else {
-                                try SMAppService.mainApp.unregister()
-                            }
-                        } catch {
-                            print("Failed to update login item: \(error)")
-                            launchAtLogin = !newValue
-                        }
+            Button(action: {
+                launchAtLogin.toggle()
+                do {
+                    if launchAtLogin {
+                        try SMAppService.mainApp.register()
+                    } else {
+                        try SMAppService.mainApp.unregister()
                     }
+                } catch {
+                    launchAtLogin = !launchAtLogin
+                }
+            }) {
+                HStack(spacing: 10) {
+                    Image(systemName: launchAtLogin ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 13))
+                        .foregroundStyle(launchAtLogin ? .green : .white.opacity(0.4))
+                        .frame(width: 20)
+
+                    Text("Launch at Login")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.white)
+
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .contentShape(Rectangle())
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
+            .buttonStyle(PlainButtonStyle())
 
-            Divider().background(.white.opacity(0.2)).padding(.vertical, 4)
+            Divider().background(.white.opacity(0.15)).padding(.horizontal, 12).padding(.vertical, 2)
 
-            // About
-            SettingsMenuItem(icon: "info.circle", title: "About Barik") {
+            SettingsMenuItem(icon: "info.circle", title: "About Barik Enhanced") {
                 AboutWindow.show()
             }
 
-            // Quit
-            SettingsMenuItem(icon: "xmark.circle", title: "Quit Barik") {
+            SettingsMenuItem(icon: "power", title: "Quit") {
                 NSApp.terminate(nil)
             }
         }
-        .padding(.vertical, 8)
-        .frame(width: 220)
+        .padding(.vertical, 6)
+        .frame(width: 200)
     }
 }
 
@@ -72,7 +66,7 @@ struct SettingsMenuItem: View {
             HStack(spacing: 10) {
                 Image(systemName: icon)
                     .font(.system(size: 13))
-                    .foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(.white.opacity(0.5))
                     .frame(width: 20)
 
                 Text(title)
@@ -82,10 +76,9 @@ struct SettingsMenuItem: View {
                 Spacer()
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 6)
+            .padding(.vertical, 8)
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
-        .background(Color.white.opacity(0.001))
     }
 }

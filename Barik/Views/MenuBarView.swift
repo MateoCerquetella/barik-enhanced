@@ -152,6 +152,18 @@ struct MenuBarView: View {
             KeyboardLayoutWidget()
                 .environmentObject(config)
 
+        case "default.claude-usage":
+            ClaudeUsageWidget()
+                .environmentObject(config)
+
+        case "default.codex-usage":
+            CodexUsageWidget()
+                .environmentObject(config)
+
+        case "default.countdown":
+            CountdownWidget()
+                .environmentObject(config)
+
         case "spacer":
             Spacer().frame(minWidth: 50, maxWidth: .infinity)
 

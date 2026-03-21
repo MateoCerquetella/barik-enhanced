@@ -14,18 +14,19 @@ class AboutWindow {
         let hostingView = NSHostingView(rootView: aboutView)
 
         let newWindow = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 350, height: 300),
-            styleMask: [.titled, .closable, .fullSizeContentView],
+            contentRect: NSRect(x: 0, y: 0, width: 320, height: 340),
+            styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
 
         newWindow.contentView = hostingView
-        newWindow.title = "About Barik"
+        newWindow.title = ""
         newWindow.center()
         newWindow.isReleasedWhenClosed = false
         newWindow.titlebarAppearsTransparent = true
-        newWindow.backgroundColor = .black
+        newWindow.titleVisibility = .hidden
+        newWindow.backgroundColor = NSColor(red: 0.08, green: 0.08, blue: 0.08, alpha: 1)
         newWindow.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
 
@@ -35,56 +36,91 @@ class AboutWindow {
 
 struct AboutView: View {
     var body: some View {
-        VStack(spacing: 16) {
-            // App icon
-            Image(systemName: "menubar.rectangle")
-                .font(.system(size: 48))
-                .foregroundStyle(.white)
-                .padding(.top, 20)
+        VStack(spacing: 0) {
+            Spacer().frame(height: 32)
 
-            Text("Barik")
-                .font(.system(size: 28, weight: .bold))
+            // Icon
+            ZStack {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        LinearGradient(
+                            colors: [.blue.opacity(0.6), .purple.opacity(0.4)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 64, height: 64)
+
+                Image(systemName: "menubar.rectangle")
+                    .font(.system(size: 30, weight: .light))
+                    .foregroundStyle(.white)
+            }
+
+            Spacer().frame(height: 16)
+
+            Text("Barik Enhanced")
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+
+            Spacer().frame(height: 4)
 
             Text("Custom Menu Bar for macOS")
-                .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.6))
+                .font(.system(size: 12))
+                .foregroundStyle(.white.opacity(0.5))
 
-            if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
-                Text("Version \(version)")
-                    .font(.caption)
+            if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
+               let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String {
+                Text("v\(version) (\(build))")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.3))
+                    .padding(.top, 2)
+            }
+
+            Spacer().frame(height: 24)
+
+            // Credits
+            VStack(spacing: 6) {
+                HStack(spacing: 6) {
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.red.opacity(0.7))
+                    Text("Mateo Cerquetella")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+
+                Text("Based on Barik by mocki-toki")
+                    .font(.system(size: 11))
                     .foregroundStyle(.white.opacity(0.4))
             }
 
-            Divider().background(.white.opacity(0.2)).padding(.horizontal, 40)
+            Spacer().frame(height: 24)
 
-            VStack(spacing: 8) {
-                Text("Built with love by")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.5))
+            // Links
+            HStack(spacing: 24) {
+                Link(destination: URL(string: "https://github.com/MateoCerquetella/barik")!) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 10))
+                        Text("GitHub")
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    .foregroundStyle(.blue.opacity(0.8))
+                }
 
-                Text("Mateo Cerquetella")
-                    .font(.system(size: 14, weight: .semibold))
-
-                Text("Based on Barik by mocki-toki")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.5))
+                Link(destination: URL(string: "https://github.com/mocki-toki/barik")!) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 10))
+                        Text("Original Barik")
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    .foregroundStyle(.white.opacity(0.4))
+                }
             }
 
-            Spacer()
-
-            HStack(spacing: 16) {
-                Link("GitHub", destination: URL(string: "https://github.com/MateoCerquetella/barik")!)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.blue)
-
-                Link("Original Barik", destination: URL(string: "https://github.com/mocki-toki/barik")!)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.blue)
-            }
-            .padding(.bottom, 20)
+            Spacer().frame(height: 24)
         }
-        .frame(width: 350, height: 300)
-        .background(.black)
+        .frame(width: 320, height: 340)
+        .background(Color(red: 0.08, green: 0.08, blue: 0.08))
         .foregroundStyle(.white)
         .preferredColorScheme(.dark)
     }
