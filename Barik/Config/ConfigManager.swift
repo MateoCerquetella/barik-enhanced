@@ -129,29 +129,56 @@ final class ConfigManager: ObservableObject {
     }
 
     private func startWatchingFile(at path: String) {
+        stopWatchingFile()
+
         fileDescriptor = open(path, O_EVTONLY)
         if fileDescriptor == -1 { return }
+
         fileWatchSource = DispatchSource.makeFileSystemObjectSource(
-            fileDescriptor: fileDescriptor, eventMask: .write,
-            queue: DispatchQueue.global())
+            fileDescriptor: fileDescriptor,
+            eventMask: [.write, .rename, .delete, .attrib],
+            queue: DispatchQueue.global()
+        )
+
         fileWatchSource?.setEventHandler { [weak self] in
-            guard let self = self, let path = self.configFilePath else {
-                return
-            }
-            // Debounce rapid file changes (e.g. editor saving multiple times)
+            guard let self = self, let path = self.configFilePath else { return }
+
+            // Debounce rapid file changes
             self.debounceWorkItem?.cancel()
             let workItem = DispatchWorkItem { [weak self] in
-                self?.parseConfigFile(at: path)
+                guard let self = self else { return }
+
+                // Re-establish watch if file was renamed/deleted (atomic save)
+                if !FileManager.default.fileExists(atPath: path) {
+                    // File was deleted/renamed, wait briefly and re-watch
+                    DispatchQueue.global().asyncAfter(deadline: .now() + 0.1) {
+                        self.startWatchingFile(at: path)
+                    }
+                    return
+                }
+
+                self.parseConfigFile(at: path)
+
+                // Re-establish watch to handle atomic saves (file replaced)
+                self.startWatchingFile(at: path)
             }
             self.debounceWorkItem = workItem
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: workItem)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: workItem)
         }
+
         fileWatchSource?.setCancelHandler { [weak self] in
             if let fd = self?.fileDescriptor, fd != -1 {
                 close(fd)
+                self?.fileDescriptor = -1
             }
         }
+
         fileWatchSource?.resume()
+    }
+
+    private func stopWatchingFile() {
+        fileWatchSource?.cancel()
+        fileWatchSource = nil
     }
 
     func updateConfigValue(key: String, newValue: String) {

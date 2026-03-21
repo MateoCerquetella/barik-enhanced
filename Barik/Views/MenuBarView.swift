@@ -42,6 +42,18 @@ struct MenuBarView: View {
                 }
             }
 
+            // Settings gear button
+            Button(action: {
+                WidgetConfiguratorWindow.show()
+            }) {
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.white.opacity(0.3))
+            }
+            .buttonStyle(PlainButtonStyle())
+            .padding(.leading, 8)
+            .help("Configure Widgets")
+
             if !displayedItems.contains(where: { $0.id == "system-banner" }) {
                 SystemBannerWidget(withLeftPadding: true)
             }

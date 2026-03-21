@@ -35,6 +35,17 @@ struct MenuBarPopupView<Content: View>: View {
         ZStack(alignment: isBottom ? .bottomTrailing : .topTrailing) {
             content
                 .background(Color.black)
+                .overlay(alignment: .bottomTrailing) {
+                    Button(action: {
+                        WidgetConfiguratorWindow.show()
+                    }) {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.white.opacity(0.25))
+                            .padding(8)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
                 .cornerRadius(((1.0 - animationValue) * 1) + 40)
                 .padding(isBottom ? .bottom : .top, foregroundHeight + 5)
                 .offset(x: computedOffset, y: isBottom ? -computedYOffset : computedYOffset)
