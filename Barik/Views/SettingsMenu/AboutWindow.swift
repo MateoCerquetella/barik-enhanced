@@ -40,21 +40,10 @@ struct AboutView: View {
             Spacer().frame(height: 32)
 
             // Icon
-            ZStack {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(
-                        LinearGradient(
-                            colors: [.blue.opacity(0.6), .purple.opacity(0.4)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 64, height: 64)
-
-                Image(systemName: "menubar.rectangle")
-                    .font(.system(size: 30, weight: .light))
-                    .foregroundStyle(.white)
-            }
+            Image(nsImage: NSApp.applicationIconImage)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 80, height: 80)
 
             Spacer().frame(height: 16)
 
@@ -83,8 +72,11 @@ struct AboutView: View {
                     Image(systemName: "heart.fill")
                         .font(.system(size: 9))
                         .foregroundStyle(.red.opacity(0.7))
-                    Text("Mateo Cerquetella")
-                        .font(.system(size: 13, weight: .semibold))
+                    Link(destination: URL(string: "https://github.com/MateoCerquetella")!) {
+                        Text("Mateo Cerquetella")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.blue.opacity(0.8))
+                    }
                 }
 
                 Text("Based on Barik by mocki-toki")
