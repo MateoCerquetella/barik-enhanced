@@ -146,9 +146,14 @@ struct CalendarHorizontalPopup: View {
 }
 
 private var currentMonthYear: String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "LLLL yyyy"
-    return formatter.string(from: Date()).capitalized
+    struct Cache {
+        static let formatter: DateFormatter = {
+            let f = DateFormatter()
+            f.dateFormat = "LLLL yyyy"
+            return f
+        }()
+    }
+    return Cache.formatter.string(from: Date()).capitalized
 }
 
 private var currentMonth: Int {
@@ -313,14 +318,28 @@ private struct EventListView: View {
     }
 }
 
+private func safeColor(from cgColor: CGColor) -> Color {
+    if let components = cgColor.components, components.count >= 3 {
+        return Color(red: components[0], green: components[1], blue: components[2])
+    }
+    return Color.blue
+}
+
 private struct EventRow: View {
     let event: EKEvent
 
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.setLocalizedDateFormatFromTemplate("j:mm")
+        return f
+    }()
+
     var body: some View {
+        let color = safeColor(from: event.calendar.cgColor)
         let eventTime = getEventTime(event)
         HStack(spacing: 4) {
             Rectangle()
-                .fill(Color(event.calendar.cgColor))
+                .fill(color)
                 .frame(width: 3, height: 30)
                 .clipShape(Capsule())
             VStack(alignment: .leading) {
@@ -336,23 +355,21 @@ private struct EventRow: View {
         }
         .padding(5)
         .padding(.trailing, 5)
-        .foregroundStyle(Color(event.calendar.cgColor))
-        .background(Color(event.calendar.cgColor).opacity(0.2))
+        .foregroundStyle(color)
+        .background(color.opacity(0.2))
         .cornerRadius(6)
         .frame(maxWidth: .infinity)
     }
 
     func getEventTime(_ event: EKEvent) -> String {
-        var text = ""
-        if !event.isAllDay {
-            let formatter = DateFormatter()
-            formatter.setLocalizedDateFormatFromTemplate("j:mm")
-            text += formatter.string(from: event.startDate).replacing(":00", with: "")
-            text += " — "
-            text += formatter.string(from: event.endDate).replacing(":00", with: "")
-        } else {
+        if event.isAllDay {
             return NSLocalizedString("ALL_DAY", comment: "")
         }
+        var text = ""
+        let formatter = Self.timeFormatter
+        text += formatter.string(from: event.startDate).replacing(":00", with: "")
+        text += " — "
+        text += formatter.string(from: event.endDate).replacing(":00", with: "")
         return text
     }
 }

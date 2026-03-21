@@ -76,10 +76,12 @@ class KeyboardLayoutManager: ObservableObject {
         
         if let nameRef = TISGetInputSourceProperty(currentSource, kTISPropertyLocalizedName) {
             let name = Unmanaged<CFString>.fromOpaque(nameRef).takeUnretainedValue() as String
-            
+            let abbreviated = self.abbreviateInputSourceName(name)
+
             DispatchQueue.main.async {
-                // Abbreviate common layout names
-                self.currentInputSource = self.abbreviateInputSourceName(name)
+                if self.currentInputSource != abbreviated {
+                    self.currentInputSource = abbreviated
+                }
             }
         }
     }

@@ -86,13 +86,25 @@ extension NSImage {
     /// - Parameter newSize: The target size.
     /// - Returns: A new NSImage resized to the given dimensions, or nil if resizing fails.
     func resized(to newSize: NSSize) -> NSImage? {
-        let newImage = NSImage(size: newSize)
-        newImage.lockFocus()
-        let rect = NSRect(origin: .zero, size: newSize)
-        self.draw(in: rect, from: NSRect(origin: .zero, size: self.size), operation: .copy, fraction: 1.0)
-        newImage.unlockFocus()
-        newImage.size = newSize
-        return newImage
+        guard let cgImage = self.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            return nil
+        }
+        let bitsPerComponent = 8
+        let bytesPerRow = 4 * Int(newSize.width)
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        guard let context = CGContext(
+            data: nil,
+            width: Int(newSize.width),
+            height: Int(newSize.height),
+            bitsPerComponent: bitsPerComponent,
+            bytesPerRow: bytesPerRow,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue
+        ) else { return nil }
+        context.interpolationQuality = .high
+        context.draw(cgImage, in: CGRect(origin: .zero, size: newSize))
+        guard let resizedCGImage = context.makeImage() else { return nil }
+        return NSImage(cgImage: resizedCGImage, size: newSize)
     }
 }
 

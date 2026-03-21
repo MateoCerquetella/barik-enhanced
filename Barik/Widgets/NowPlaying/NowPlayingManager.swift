@@ -272,13 +272,11 @@ final class NowPlayingManager: ObservableObject, ConditionallyActivatableWidget 
         cancellable = nil
     }
 
-    /// Updates the now playing song asynchronously.
+    /// Updates the now playing song on the main thread (NSAppleScript is not thread-safe).
     private func updateNowPlaying() {
-        DispatchQueue.global(qos: .background).async {
-            let song = NowPlayingProvider.fetchNowPlaying()
-            DispatchQueue.main.async { [weak self] in
-                self?.nowPlaying = song
-            }
+        let song = NowPlayingProvider.fetchNowPlaying()
+        if self.nowPlaying != song {
+            self.nowPlaying = song
         }
     }
 

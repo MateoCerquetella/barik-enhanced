@@ -35,7 +35,7 @@ class CalendarManager: ObservableObject {
     }
 
     private func startMonitoring() {
-        timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) {
+        timer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) {
             [weak self] _ in
             // Run calendar fetches on background queue to avoid blocking UI
             DispatchQueue.global(qos: .background).async {
@@ -108,8 +108,11 @@ class CalendarManager: ObservableObject {
         let filteredEvents = filterEvents(events)
         let regularEvents = filteredEvents.filter { !$0.isAllDay }
         let next = regularEvents.first ?? filteredEvents.first
-        DispatchQueue.main.async {
-            self.nextEvent = next
+        let changed = next?.eventIdentifier != self.nextEvent?.eventIdentifier
+        if changed {
+            DispatchQueue.main.async {
+                self.nextEvent = next
+            }
         }
     }
 
@@ -139,8 +142,12 @@ class CalendarManager: ObservableObject {
             .filter { $0.endDate >= now }
             .sorted { $0.startDate < $1.startDate }
         let filteredEvents = filterEvents(events)
-        DispatchQueue.main.async {
-            self.todaysEvents = filteredEvents
+        let newIds = filteredEvents.map { $0.eventIdentifier }
+        let oldIds = self.todaysEvents.map { $0.eventIdentifier }
+        if newIds != oldIds {
+            DispatchQueue.main.async {
+                self.todaysEvents = filteredEvents
+            }
         }
     }
 
@@ -173,8 +180,12 @@ class CalendarManager: ObservableObject {
             $0.startDate < $1.startDate
         }
         let filteredEvents = filterEvents(events)
-        DispatchQueue.main.async {
-            self.tomorrowsEvents = filteredEvents
+        let newIds = filteredEvents.map { $0.eventIdentifier }
+        let oldIds = self.tomorrowsEvents.map { $0.eventIdentifier }
+        if newIds != oldIds {
+            DispatchQueue.main.async {
+                self.tomorrowsEvents = filteredEvents
+            }
         }
     }
 }

@@ -11,6 +11,7 @@ final class ConfigManager: ObservableObject {
     private var fileWatchSource: DispatchSourceFileSystemObject?
     private var fileDescriptor: CInt = -1
     private var configFilePath: String?
+    private var debounceWorkItem: DispatchWorkItem?
 
     private init() {
         loadOrCreateConfigIfNeeded()
@@ -137,7 +138,13 @@ final class ConfigManager: ObservableObject {
             guard let self = self, let path = self.configFilePath else {
                 return
             }
-            self.parseConfigFile(at: path)
+            // Debounce rapid file changes (e.g. editor saving multiple times)
+            self.debounceWorkItem?.cancel()
+            let workItem = DispatchWorkItem { [weak self] in
+                self?.parseConfigFile(at: path)
+            }
+            self.debounceWorkItem = workItem
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: workItem)
         }
         fileWatchSource?.setCancelHandler { [weak self] in
             if let fd = self?.fileDescriptor, fd != -1 {

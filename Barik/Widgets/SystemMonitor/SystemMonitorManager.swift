@@ -86,11 +86,6 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
         let shouldBeActive = systemWidgets.contains { activationManager.isWidgetActive($0) }
         
         if shouldBeActive {
-            print("SystemMonitorManager: Activating via WidgetActivationManager")
-            activate()
-        } else {
-            // Fallback: activate anyway for now to prevent breaking the widget
-            print("SystemMonitorManager: Fallback activation")
             activate()
         }
     }

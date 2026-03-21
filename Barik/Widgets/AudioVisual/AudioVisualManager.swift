@@ -110,19 +110,15 @@ class AudioVisualManager: ObservableObject {
             // Update UI on main queue
             DispatchQueue.main.async {
                 if volumeResult == noErr {
-                    self.volumeLevel = max(0.0, min(1.0, volume))
-                } else {
-                    // Fallback: keep current volume or set to reasonable default
-                    if self.volumeLevel == 0.0 {
-                        self.volumeLevel = 0.5
-                    }
+                    let newVolume = max(0.0, min(1.0, volume))
+                    if self.volumeLevel != newVolume { self.volumeLevel = newVolume }
+                } else if self.volumeLevel == 0.0 {
+                    self.volumeLevel = 0.5
                 }
-                
+
                 if muteResult == noErr {
-                    self.isMuted = muteValue != 0
-                } else {
-                    // If we can't determine mute status, assume not muted
-                    self.isMuted = false
+                    let newMuted = muteValue != 0
+                    if self.isMuted != newMuted { self.isMuted = newMuted }
                 }
             }
         }

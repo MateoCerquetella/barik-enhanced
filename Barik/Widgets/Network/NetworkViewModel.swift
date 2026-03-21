@@ -125,7 +125,7 @@ final class NetworkStatusViewModel: NSObject, ObservableObject,
     // MARK: — Updating Wi‑Fi information via CoreWLAN.
 
     private func startWiFiMonitoring() {
-        timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) {
+        timer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: true) {
             [weak self] _ in
             self?.updateWiFiInfo()
         }
@@ -140,9 +140,10 @@ final class NetworkStatusViewModel: NSObject, ObservableObject,
     private func updateWiFiInfo() {
         let client = CWWiFiClient.shared()
         if let interface = client.interface() {
-            self.ssid = interface.ssid() ?? "Not connected"
-            self.rssi = interface.rssiValue()
-            self.noise = interface.noiseMeasurement()
+            let newSSID = interface.ssid() ?? "Not connected"
+            let newRSSI = interface.rssiValue()
+            let newNoise = interface.noiseMeasurement()
+            let newChannel: String
             if let wlanChannel = interface.wlanChannel() {
                 let band: String
                 switch wlanChannel.channelBand {
@@ -157,16 +158,21 @@ final class NetworkStatusViewModel: NSObject, ObservableObject,
                 @unknown default:
                     band = "unknown"
                 }
-                self.channel = "\(wlanChannel.channelNumber) (\(band))"
+                newChannel = "\(wlanChannel.channelNumber) (\(band))"
             } else {
-                self.channel = "N/A"
+                newChannel = "N/A"
             }
+            // Only update if changed to avoid unnecessary SwiftUI redraws
+            if newSSID != self.ssid { self.ssid = newSSID }
+            if newRSSI != self.rssi { self.rssi = newRSSI }
+            if newNoise != self.noise { self.noise = newNoise }
+            if newChannel != self.channel { self.channel = newChannel }
         } else {
             // Interface not available – Wi‑Fi is off.
-            self.ssid = "No interface"
-            self.rssi = 0
-            self.noise = 0
-            self.channel = "N/A"
+            if self.ssid != "No interface" { self.ssid = "No interface" }
+            if self.rssi != 0 { self.rssi = 0 }
+            if self.noise != 0 { self.noise = 0 }
+            if self.channel != "N/A" { self.channel = "N/A" }
         }
     }
 

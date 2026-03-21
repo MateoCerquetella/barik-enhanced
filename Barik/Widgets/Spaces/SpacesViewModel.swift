@@ -106,18 +106,23 @@ class SpacesViewModel: ObservableObject, ConditionallyActivatableWidget {
     }
 
     private func loadSpaces() {
-        DispatchQueue.global(qos: .background).async {
+        DispatchQueue.global(qos: .background).async { [weak self] in
+            guard let self = self else { return }
             guard let provider = self.provider,
                 let spaces = provider.getSpacesWithWindows()
             else {
                 DispatchQueue.main.async {
-                    self.spaces = []
+                    if !self.spaces.isEmpty { self.spaces = [] }
                 }
                 return
             }
             let sortedSpaces = spaces.sorted { $0.id < $1.id }
+            let newIDs = sortedSpaces.map { $0.id }
+            let currentIDs = self.spaces.map { $0.id }
             DispatchQueue.main.async {
-                self.spaces = sortedSpaces
+                if newIDs != currentIDs {
+                    self.spaces = sortedSpaces
+                }
             }
         }
     }
