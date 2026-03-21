@@ -41,6 +41,13 @@ struct MenuBarView: View {
                 Button("Configure Widgets...") {
                     WidgetConfiguratorWindow.show()
                 }
+                Button("Edit Config...") {
+                    openConfigFile()
+                }
+                Divider()
+                Button("Quit Barik") {
+                    NSApp.terminate(nil)
+                }
             }
 
             // Settings gear button
@@ -178,6 +185,20 @@ struct MenuBarView: View {
 
         default:
             Text("?\(item.id)?").foregroundColor(.red)
+        }
+    }
+
+    // MARK: - Actions
+
+    private func openConfigFile() {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let path1 = "\(home)/.barik-config.toml"
+        let path2 = "\(home)/.config/barik/config.toml"
+
+        if FileManager.default.fileExists(atPath: path1) {
+            NSWorkspace.shared.open(URL(fileURLWithPath: path1))
+        } else if FileManager.default.fileExists(atPath: path2) {
+            NSWorkspace.shared.open(URL(fileURLWithPath: path2))
         }
     }
 

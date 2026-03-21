@@ -10,8 +10,8 @@ struct WeatherWidget: View {
             if let weather = weatherManager.weather {
                 Image(systemName: WeatherManager.weatherIcon(for: weather.weatherCode))
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(weatherIconColor(code: weather.weatherCode))
-                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(.foregroundOutside)
+                    .symbolRenderingMode(.monochrome)
 
                 Text("\(Int(weather.temperature))°")
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
