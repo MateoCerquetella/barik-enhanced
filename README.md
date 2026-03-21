@@ -1,5 +1,9 @@
 # Barik Enhanced
 
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/MateoCerquetella/barik-enhanced/releases/tag/v1.0.0)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![macOS](https://img.shields.io/badge/macOS-14.0%2B-black.svg)](https://github.com/MateoCerquetella/barik-enhanced)
+
 A custom, fully configurable menu bar for macOS. Built on top of [Barik](https://github.com/mocki-toki/barik) with new widgets, drag-and-drop configuration, performance optimizations, and more.
 
 ![Menu Bar](resources/screenshots/menubar-full.png)
@@ -52,6 +56,12 @@ Click the gear icon at the end of the bar to access:
 - **Quit** — close the app
 
 ## Installation
+
+### Homebrew (Recommended)
+```bash
+brew tap MateoCerquetella/barik-enhanced
+brew install --cask barik-enhanced
+```
 
 ### From Source
 ```bash
