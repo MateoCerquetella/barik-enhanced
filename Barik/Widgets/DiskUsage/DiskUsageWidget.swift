@@ -7,7 +7,7 @@ struct DiskUsageWidget: View {
     var warningLevel: Double { Double(config["warning-level"]?.intValue ?? 80) }
     var criticalLevel: Double { Double(config["critical-level"]?.intValue ?? 90) }
 
-    @StateObject private var diskManager = DiskUsageManager()
+    @ObservedObject private var diskManager = DiskUsageManager.shared
     @State private var rect: CGRect = .zero
 
     var body: some View {

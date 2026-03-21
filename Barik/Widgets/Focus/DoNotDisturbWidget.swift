@@ -2,7 +2,7 @@ import SwiftUI
 
 struct DoNotDisturbWidget: View {
     @EnvironmentObject var configProvider: ConfigProvider
-    @StateObject private var dndManager = DoNotDisturbManager()
+    @ObservedObject private var dndManager = DoNotDisturbManager.shared
 
     var body: some View {
         HStack(spacing: 4) {

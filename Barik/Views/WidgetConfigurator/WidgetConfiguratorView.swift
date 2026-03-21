@@ -5,6 +5,7 @@ struct WidgetConfiguratorView: View {
     @ObservedObject var configManager = ConfigManager.shared
     @State private var activeWidgetIDs: [String] = []
     @State private var isDropTargeted = false
+    @State private var applyWorkItem: DispatchWorkItem?
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -67,15 +68,15 @@ struct WidgetConfiguratorView: View {
 
                     List {
                         ForEach(Array(activeWidgetIDs.enumerated()), id: \.offset) { entry in
-                            let index: Int = entry.offset
                             let widgetID: String = entry.element
                             ActiveWidgetRow(
                                 widget: allWidgets.first(where: { $0.id == widgetID }),
                                 widgetID: widgetID,
                                 onRemove: {
                                     withAnimation(.spring(duration: 0.3)) {
-                                        if index < activeWidgetIDs.count {
-                                            activeWidgetIDs.remove(at: index)
+                                        // Find current index at removal time, not capture time
+                                        if let currentIndex = activeWidgetIDs.firstIndex(of: widgetID) {
+                                            activeWidgetIDs.remove(at: currentIndex)
                                         }
                                     }
                                 }
@@ -84,22 +85,21 @@ struct WidgetConfiguratorView: View {
                         .onMove { source, destination in
                             activeWidgetIDs.move(fromOffsets: source, toOffset: destination)
                         }
-                    }
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
-                    .onDrop(of: [.text], isTargeted: $isDropTargeted) { providers in
-                        guard let provider = providers.first else { return false }
-                        provider.loadObject(ofClass: NSString.self) { string, _ in
-                            if let widgetID = string as? String {
-                                DispatchQueue.main.async {
-                                    withAnimation(.spring(duration: 0.3)) {
-                                        activeWidgetIDs.append(widgetID)
+                        .onInsert(of: [.text]) { index, providers in
+                            guard let provider = providers.first else { return }
+                            provider.loadObject(ofClass: NSString.self) { string, _ in
+                                if let widgetID = string as? String {
+                                    DispatchQueue.main.async {
+                                        withAnimation(.spring(duration: 0.3)) {
+                                            activeWidgetIDs.insert(widgetID, at: min(index, activeWidgetIDs.count))
+                                        }
                                     }
                                 }
                             }
                         }
-                        return true
                     }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(.blue.opacity(isDropTargeted ? 0.5 : 0), lineWidth: 2)
@@ -144,7 +144,11 @@ struct WidgetConfiguratorView: View {
             activeWidgetIDs = configManager.config.rootToml.widgets.displayed.map { $0.id }
         }
         .onChange(of: activeWidgetIDs) { _, _ in
-            applyChanges()
+            // Debounce: wait 300ms before writing to disk
+            applyWorkItem?.cancel()
+            let work = DispatchWorkItem { applyChanges() }
+            applyWorkItem = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: work)
         }
     }
 
@@ -161,6 +165,8 @@ struct WidgetConfiguratorView: View {
             let content = try String(contentsOfFile: path, encoding: .utf8)
             let updated = replaceDisplayedWidgets(in: content, with: arrayStr)
             try updated.write(toFile: path, atomically: true, encoding: .utf8)
+            // Force immediate reload — don't wait for file watcher
+            configManager.reloadConfig()
         } catch {
             print("Error saving widget config: \(error)")
         }

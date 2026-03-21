@@ -11,7 +11,7 @@ struct CPURAMWidget: View {
     var ramWarningLevel: Int { config["ram-warning-level"]?.intValue ?? 70 }
     var ramCriticalLevel: Int { config["ram-critical-level"]?.intValue ?? 90 }
     
-    @StateObject private var systemMonitor = SystemMonitorManager()
+    @ObservedObject private var systemMonitor = SystemMonitorManager.shared
     
     @State private var rect: CGRect = CGRect()
     

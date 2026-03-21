@@ -2,13 +2,15 @@ import Foundation
 import Combine
 
 final class DiskUsageManager: ObservableObject {
+    static let shared = DiskUsageManager()
+
     @Published var usedGB: Double = 0.0
     @Published var totalGB: Double = 0.0
     @Published var usagePercent: Double = 0.0
 
     private var timer: Timer?
 
-    init() {
+    private init() {
         startMonitoring()
     }
 

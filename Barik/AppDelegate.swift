@@ -5,6 +5,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBarPanels: [NSPanel] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Prevent multiple instances
+        let runningApps = NSWorkspace.shared.runningApplications.filter {
+            $0.bundleIdentifier == Bundle.main.bundleIdentifier
+        }
+        if runningApps.count > 1 {
+            NSApp.terminate(nil)
+            return
+        }
+
         if let error = ConfigManager.shared.initError {
             showFatalConfigError(message: error)
             return

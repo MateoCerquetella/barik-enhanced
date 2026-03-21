@@ -2,12 +2,14 @@ import Foundation
 import Combine
 
 final class UptimeManager: ObservableObject {
+    static let shared = UptimeManager()
+
     @Published var uptimeString: String = ""
     @Published var bootDate: Date = Date()
 
     private var timer: Timer?
 
-    init() {
+    private init() {
         startMonitoring()
     }
 

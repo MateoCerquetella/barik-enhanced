@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct DiskUsagePopup: View {
-    @StateObject private var diskManager = DiskUsageManager()
+    @ObservedObject private var diskManager = DiskUsageManager.shared
 
     var body: some View {
         VStack(spacing: 16) {

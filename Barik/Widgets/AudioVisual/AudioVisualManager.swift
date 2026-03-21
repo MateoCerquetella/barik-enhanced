@@ -6,13 +6,15 @@ import IOKit.graphics
 
 /// Central manager for audio and visual system controls.
 class AudioVisualManager: ObservableObject {
+    static let shared = AudioVisualManager()
+
     @Published var volumeLevel: Float = 0.0
     @Published var isMuted: Bool = false
-    
+
     private var timer: Timer?
     private var audioObjectPropertyAddress: AudioObjectPropertyAddress
-    
-    init() {
+
+    private init() {
         audioObjectPropertyAddress = AudioObjectPropertyAddress(
             mSelector: kAudioDevicePropertyVolumeScalar,
             mScope: kAudioObjectPropertyScopeOutput,

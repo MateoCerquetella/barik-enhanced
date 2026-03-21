@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct KeyboardLayoutPopup: View {
-    @StateObject private var keyboardLayoutManager = KeyboardLayoutManager()
+    @ObservedObject private var keyboardLayoutManager = KeyboardLayoutManager.shared
     
     var body: some View {
         VStack(spacing: 16) {

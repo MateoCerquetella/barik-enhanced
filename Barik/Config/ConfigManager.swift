@@ -45,6 +45,11 @@ final class ConfigManager: ObservableObject {
         }
     }
 
+    func reloadConfig() {
+        guard let path = configFilePath else { return }
+        parseConfigFile(at: path)
+    }
+
     private func parseConfigFile(at path: String) {
         do {
             let content = try String(contentsOfFile: path, encoding: .utf8)
@@ -136,34 +141,21 @@ final class ConfigManager: ObservableObject {
 
         fileWatchSource = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: fileDescriptor,
-            eventMask: [.write, .rename, .delete, .attrib],
+            eventMask: [.write, .delete, .rename],
             queue: DispatchQueue.global()
         )
 
         fileWatchSource?.setEventHandler { [weak self] in
             guard let self = self, let path = self.configFilePath else { return }
 
-            // Debounce rapid file changes
             self.debounceWorkItem?.cancel()
             let workItem = DispatchWorkItem { [weak self] in
                 guard let self = self else { return }
-
-                // Re-establish watch if file was renamed/deleted (atomic save)
-                if !FileManager.default.fileExists(atPath: path) {
-                    // File was deleted/renamed, wait briefly and re-watch
-                    DispatchQueue.global().asyncAfter(deadline: .now() + 0.1) {
-                        self.startWatchingFile(at: path)
-                    }
-                    return
-                }
-
+                guard FileManager.default.fileExists(atPath: path) else { return }
                 self.parseConfigFile(at: path)
-
-                // Re-establish watch to handle atomic saves (file replaced)
-                self.startWatchingFile(at: path)
             }
             self.debounceWorkItem = workItem
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: workItem)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: workItem)
         }
 
         fileWatchSource?.setCancelHandler { [weak self] in

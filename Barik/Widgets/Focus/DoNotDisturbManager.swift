@@ -3,10 +3,12 @@ import Combine
 import Foundation
 
 final class DoNotDisturbManager: ObservableObject {
+    static let shared = DoNotDisturbManager()
+
     @Published var isFocusActive: Bool = false
     private var timer: Timer?
 
-    init() {
+    private init() {
         startMonitoring()
     }
 
@@ -16,7 +18,7 @@ final class DoNotDisturbManager: ObservableObject {
 
     private func startMonitoring() {
         updateStatus()
-        timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { [weak self] _ in
             self?.updateStatus()
         }
     }
@@ -42,24 +44,12 @@ final class DoNotDisturbManager: ObservableObject {
 
     private func checkFocusState() -> Bool {
         let assertionsPath = NSHomeDirectory() + "/Library/DoNotDisturb/DB/Assertions.json"
-        let task = Process()
-        task.launchPath = "/usr/bin/plutil"
-        task.arguments = ["-p", assertionsPath]
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        task.standardError = Pipe()
-
-        do {
-            try task.run()
-            task.waitUntilExit()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            if let output = String(data: data, encoding: .utf8) {
-                // If there are active assertion records, Focus is on
-                return output.contains("storeAssertionRecords")
-                    && !output.contains("\"storeAssertionRecords\" => {\n}")
-            }
-        } catch {}
-        return false
+        guard let data = FileManager.default.contents(atPath: assertionsPath),
+              let content = String(data: data, encoding: .utf8) else {
+            return false
+        }
+        // If there are active assertion records, Focus is on
+        return content.contains("storeAssertionRecords") && content.count > 100
     }
 
     func toggleFocus() {

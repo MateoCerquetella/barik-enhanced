@@ -80,9 +80,12 @@ struct WidgetsSection: Decodable {
         let container = try decoder.container(keyedBy: DynamicKey.self)
 
         let displayedKey = DynamicKey(stringValue: "displayed")!
-        let displayedArray = try container.decode(
+        let rawDisplayed = try container.decode(
             [TomlWidgetItem].self, forKey: displayedKey)
-        self.displayed = displayedArray
+        // Assign stable position-based IDs to avoid recreating all widgets
+        self.displayed = rawDisplayed.enumerated().map { index, item in
+            TomlWidgetItem(id: item.id, inlineParams: item.inlineParams, position: index)
+        }
 
         var tempDict = [String: ConfigData]()
 
@@ -120,12 +123,12 @@ struct WidgetsSection: Decodable {
 }
 
 struct TomlWidgetItem: Decodable, Identifiable, Equatable {
-    let instanceID: UUID
+    let instanceID: String
     let id: String
     let inlineParams: ConfigData
 
-    init(id: String, inlineParams: ConfigData) {
-        self.instanceID = UUID()
+    init(id: String, inlineParams: ConfigData, position: Int = 0) {
+        self.instanceID = "\(id)-\(position)"
         self.id = id
         self.inlineParams = inlineParams
     }
@@ -135,7 +138,8 @@ struct TomlWidgetItem: Decodable, Identifiable, Equatable {
     }
 
     init(from decoder: Decoder) throws {
-        self.instanceID = UUID()
+        // Temporary — will be assigned stable ID after decoding
+        self.instanceID = UUID().uuidString
         let container = try decoder.singleValueContainer()
 
         if let strValue = try? container.decode(String.self) {

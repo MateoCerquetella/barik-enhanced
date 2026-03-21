@@ -5,7 +5,7 @@ struct VolumeWidget: View {
     var config: ConfigData { configProvider.config }
     var showPercentage: Bool { config["show-percentage"]?.boolValue ?? false }
     
-    @StateObject private var audioVisualManager = AudioVisualManager()
+    @ObservedObject private var audioVisualManager = AudioVisualManager.shared
     @State private var rect: CGRect = .zero
     
     var body: some View {

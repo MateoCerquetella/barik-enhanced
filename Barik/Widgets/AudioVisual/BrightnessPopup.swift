@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct BrightnessPopup: View {
-    @StateObject private var brightnessManager = BrightnessManager()
+    @ObservedObject private var brightnessManager = BrightnessManager.shared
 
     var body: some View {
         VStack(spacing: 20) {

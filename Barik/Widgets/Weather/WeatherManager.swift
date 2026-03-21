@@ -15,6 +15,8 @@ struct WeatherData {
 }
 
 final class WeatherManager: NSObject, ObservableObject, CLLocationManagerDelegate {
+    static let shared = WeatherManager()
+
     @Published var weather: WeatherData?
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
@@ -24,12 +26,12 @@ final class WeatherManager: NSObject, ObservableObject, CLLocationManagerDelegat
     private var timer: Timer?
     private var geocoder = CLGeocoder()
 
-    override init() {
+    private override init() {
         super.init()
         locationManager.delegate = self
-        locationManager.desiredAccuracy = kCLLocationAccuracyKilometer
+        locationManager.desiredAccuracy = kCLLocationAccuracyThreeKilometers
         locationManager.requestWhenInUseAuthorization()
-        locationManager.startUpdatingLocation()
+        locationManager.requestLocation()
         startMonitoring()
     }
 
@@ -50,6 +52,7 @@ final class WeatherManager: NSObject, ObservableObject, CLLocationManagerDelegat
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
+        locationManager.stopUpdatingLocation()
 
         // Only refetch if moved >1km
         if let last = lastLocation, location.distance(from: last) < 1000 {
@@ -109,7 +112,8 @@ final class WeatherManager: NSObject, ObservableObject, CLLocationManagerDelegat
                     }
 
                     // Reverse geocode for location name
-                    self.geocoder.reverseGeocodeLocation(location) { placemarks, _ in
+                    self.geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, _ in
+                        guard let self = self else { return }
                         let name = placemarks?.first?.locality ?? "Unknown"
 
                         let weatherData = WeatherData(

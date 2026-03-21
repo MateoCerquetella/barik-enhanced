@@ -3,7 +3,7 @@ import SwiftUI
 struct KeyboardLayoutWidget: View {
     @EnvironmentObject var configProvider: ConfigProvider
     
-    @StateObject private var keyboardLayoutManager = KeyboardLayoutManager()
+    @ObservedObject private var keyboardLayoutManager = KeyboardLayoutManager.shared
     @State private var rect: CGRect = .zero
     
     var body: some View {

@@ -3,6 +3,7 @@ import Combine
 import Foundation
 
 class SpacesViewModel: ObservableObject, ConditionallyActivatableWidget {
+    static let shared = SpacesViewModel()
     @Published var spaces: [AnySpace] = []
     private var timer: Timer?
     private var provider: AnySpacesProvider?
@@ -11,7 +12,7 @@ class SpacesViewModel: ObservableObject, ConditionallyActivatableWidget {
     
     private var isActive = false
 
-    init() {
+    private init() {
         let runningApps = NSWorkspace.shared.runningApplications.compactMap {
             $0.localizedName?.lowercased()
         }

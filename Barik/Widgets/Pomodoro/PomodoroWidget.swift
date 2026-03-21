@@ -4,7 +4,7 @@ struct PomodoroWidget: View {
     @EnvironmentObject var configProvider: ConfigProvider
     var config: ConfigData { configProvider.config }
 
-    @StateObject private var pomodoroManager = PomodoroManager()
+    @ObservedObject private var pomodoroManager = PomodoroManager.shared
     @State private var rect: CGRect = .zero
 
     var body: some View {

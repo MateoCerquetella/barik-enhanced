@@ -2,7 +2,7 @@ import SwiftUI
 
 struct WeatherWidget: View {
     @EnvironmentObject var configProvider: ConfigProvider
-    @StateObject private var weatherManager = WeatherManager()
+    @ObservedObject private var weatherManager = WeatherManager.shared
     @State private var rect: CGRect = .zero
 
     var body: some View {

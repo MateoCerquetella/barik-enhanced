@@ -4,7 +4,7 @@ struct NetworkActivityWidget: View {
     @EnvironmentObject var configProvider: ConfigProvider
     var config: ConfigData { configProvider.config }
     
-    @StateObject private var systemMonitor = SystemMonitorManager()
+    @ObservedObject private var systemMonitor = SystemMonitorManager.shared
     
     @State private var rect: CGRect = CGRect()
     

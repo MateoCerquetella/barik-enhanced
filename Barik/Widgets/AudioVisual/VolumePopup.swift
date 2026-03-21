@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct VolumePopup: View {
-    @StateObject private var audioVisualManager = AudioVisualManager()
+    @ObservedObject private var audioVisualManager = AudioVisualManager.shared
     
     var body: some View {
         VStack(spacing: 20) {

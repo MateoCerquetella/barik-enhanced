@@ -7,6 +7,7 @@ enum PomodoroState: String {
 }
 
 final class PomodoroManager: ObservableObject {
+    static let shared = PomodoroManager()
     @Published var state: PomodoroState = .idle
     @Published var timeRemaining: TimeInterval = 25 * 60
     @Published var completedPomodoros: Int = 0
@@ -17,6 +18,8 @@ final class PomodoroManager: ObservableObject {
     var pomodorosBeforeLongBreak: Int = 4
 
     private var timer: Timer?
+
+    private init() {}
 
     var timeString: String {
         let minutes = Int(timeRemaining) / 60

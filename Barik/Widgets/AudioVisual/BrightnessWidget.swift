@@ -5,7 +5,7 @@ struct BrightnessWidget: View {
     var config: ConfigData { configProvider.config }
     var showPercentage: Bool { config["show-percentage"]?.boolValue ?? false }
 
-    @StateObject private var brightnessManager = BrightnessManager()
+    @ObservedObject private var brightnessManager = BrightnessManager.shared
     @State private var rect: CGRect = .zero
 
     var body: some View {

@@ -3,7 +3,7 @@ import SwiftUI
 struct MicrophoneWidget: View {
     @EnvironmentObject var configProvider: ConfigProvider
 
-    @StateObject private var micManager = MicrophoneManager()
+    @ObservedObject private var micManager = MicrophoneManager.shared
     @State private var rect: CGRect = .zero
 
     var body: some View {

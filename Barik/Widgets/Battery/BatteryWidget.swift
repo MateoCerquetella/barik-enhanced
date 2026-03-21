@@ -7,7 +7,7 @@ struct BatteryWidget: View {
     var warningLevel: Int { config["warning-level"]?.intValue ?? 20 }
     var criticalLevel: Int { config["critical-level"]?.intValue ?? 10 }
 
-    @StateObject private var batteryManager = BatteryManager()
+    @ObservedObject private var batteryManager = BatteryManager.shared
     private var level: Int { batteryManager.batteryLevel }
     private var isCharging: Bool { batteryManager.isCharging }
     private var isPluggedIn: Bool { batteryManager.isPluggedIn }

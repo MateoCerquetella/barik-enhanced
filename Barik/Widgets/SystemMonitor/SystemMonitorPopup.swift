@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SystemMonitorPopup: View {
-    @StateObject private var systemMonitor = SystemMonitorManager()
+    @ObservedObject private var systemMonitor = SystemMonitorManager.shared
     @State private var cpuHistory: [Double] = Array(repeating: 0, count: 30)
     @State private var ramHistory: [Double] = Array(repeating: 0, count: 30)
     @State private var networkUpHistory: [Double] = Array(repeating: 0, count: 30)

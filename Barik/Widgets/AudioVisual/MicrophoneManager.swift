@@ -4,13 +4,15 @@ import CoreAudio
 import Foundation
 
 final class MicrophoneManager: ObservableObject {
+    static let shared = MicrophoneManager()
+
     @Published var isActive: Bool = false
     @Published var isMuted: Bool = false
     @Published var inputLevel: Float = 0.0
 
     private var timer: Timer?
 
-    init() {
+    private init() {
         startMonitoring()
     }
 
@@ -20,7 +22,7 @@ final class MicrophoneManager: ObservableObject {
 
     private func startMonitoring() {
         updateStatus()
-        timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { [weak self] _ in
             self?.updateStatus()
         }
     }

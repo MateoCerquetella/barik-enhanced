@@ -21,7 +21,13 @@ class HidingPanel: NSPanel, NSWindowDelegate {
         self.delegate = self
     }
 
+    deinit {
+        hideTimer?.invalidate()
+        hideTimer = nil
+    }
+
     func windowDidResignKey(_ notification: Notification) {
+        hideTimer?.invalidate()
         NotificationCenter.default.post(name: .willHideWindow, object: nil)
         hideTimer = Timer.scheduledTimer(
             withTimeInterval: TimeInterval(

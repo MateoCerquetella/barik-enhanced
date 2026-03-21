@@ -5,13 +5,15 @@ import InputMethodKit
 
 /// Manages keyboard input source monitoring and switching.
 class KeyboardLayoutManager: ObservableObject {
+    static let shared = KeyboardLayoutManager()
+
     @Published var currentInputSource: String = "EN"
     @Published var availableInputSources: [String] = []
     
     private var timer: Timer?
     private var inputSources: [TISInputSource] = []
     
-    init() {
+    private init() {
         startMonitoring()
     }
     

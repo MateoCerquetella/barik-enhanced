@@ -5,6 +5,7 @@ import IOKit
 
 /// This class monitors system performance metrics: CPU, RAM, Temperature, and Network Activity.
 class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
+    static let shared = SystemMonitorManager()
     @Published var cpuLoad: Double = 0.0
     @Published var ramUsage: Double = 0.0
 
@@ -33,7 +34,7 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
     
     private var isActive = false
     
-    init() {
+    private init() {
         setupNotifications()
         // For now, always activate to ensure widgets work
         activate()
@@ -164,71 +165,11 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
                 self.idleLoad = 100.0 - cpuPercent
             }
         } else {
-            // Fallback to a simple process-based approach
-            self.updateCPUUsageViaProcessInfo()
-        }
-    }
-    
-    private func updateCPUUsageViaProcessInfo() {
-        let task = Process()
-        task.launchPath = "/usr/bin/top"
-        task.arguments = ["-l", "1", "-n", "0"]
-        
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        
-        do {
-            try task.run()
-            task.waitUntilExit()
-            
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            if let output = String(data: data, encoding: .utf8) {
-                self.parseCPUFromTopOutput(output)
-            }
-        } catch {
-            // If all else fails, provide reasonable default values
             DispatchQueue.main.async {
-                self.cpuLoad = 15.0
-                self.userLoad = 10.0
-                self.systemLoad = 5.0
-                self.idleLoad = 85.0
-            }
-        }
-    }
-    
-    private func parseCPUFromTopOutput(_ output: String) {
-        let lines = output.components(separatedBy: .newlines)
-        for line in lines {
-            if line.contains("CPU usage:") {
-                // Parse line like: "CPU usage: 12.5% user, 3.2% sys, 84.3% idle"
-                let components = line.components(separatedBy: ",")
-                var userPercent: Double = 0
-                var systemPercent: Double = 0
-                
-                for component in components {
-                    let trimmed = component.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if trimmed.contains("user") {
-                        let userString = trimmed.replacingOccurrences(of: "% user", with: "")
-                            .replacingOccurrences(of: "CPU usage: ", with: "")
-                            .trimmingCharacters(in: .whitespacesAndNewlines)
-                        userPercent = Double(userString) ?? 0
-                    } else if trimmed.contains("sys") {
-                        let sysString = trimmed.replacingOccurrences(of: "% sys", with: "")
-                            .trimmingCharacters(in: .whitespacesAndNewlines)
-                        systemPercent = Double(sysString) ?? 0
-                    }
-                }
-                
-                let totalPercent = userPercent + systemPercent
-                let idlePercent = 100.0 - totalPercent
-                
-                DispatchQueue.main.async {
-                    self.cpuLoad = min(100.0, max(0.0, totalPercent))
-                    self.userLoad = min(100.0, max(0.0, userPercent))
-                    self.systemLoad = min(100.0, max(0.0, systemPercent))
-                    self.idleLoad = min(100.0, max(0.0, idlePercent))
-                }
-                break
+                self.cpuLoad = 0.0
+                self.userLoad = 0.0
+                self.systemLoad = 0.0
+                self.idleLoad = 100.0
             }
         }
     }

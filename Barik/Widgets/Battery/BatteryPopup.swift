@@ -2,7 +2,7 @@ import EventKit
 import SwiftUI
 
 struct BatteryPopup: View {
-    @StateObject private var batteryManager = BatteryManager()
+    @ObservedObject private var batteryManager = BatteryManager.shared
 
     var body: some View {
         ZStack {

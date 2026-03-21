@@ -4,6 +4,7 @@ import IOKit.ps
 
 /// This class monitors the battery status.
 class BatteryManager: ObservableObject, ConditionallyActivatableWidget {
+    static let shared = BatteryManager()
     @Published var batteryLevel: Int = 0
     @Published var isCharging: Bool = false
     @Published var isPluggedIn: Bool = false
@@ -14,7 +15,7 @@ class BatteryManager: ObservableObject, ConditionallyActivatableWidget {
     
     private var isActive = false
 
-    init() {
+    private init() {
         setupNotifications()
         // For now, always activate to ensure widgets work
         activate()

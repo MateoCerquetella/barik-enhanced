@@ -5,10 +5,12 @@ import IOKit
 import IOKit.graphics
 
 final class BrightnessManager: ObservableObject {
+    static let shared = BrightnessManager()
+
     @Published var brightness: Float = 1.0
     private var timer: Timer?
 
-    init() {
+    private init() {
         startMonitoring()
     }
 

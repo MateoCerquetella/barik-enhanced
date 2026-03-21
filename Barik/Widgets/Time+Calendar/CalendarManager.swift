@@ -3,9 +3,10 @@ import EventKit
 import Foundation
 
 class CalendarManager: ObservableObject {
-    let configProvider: ConfigProvider
-    var config: ConfigData? {
-        configProvider.config["calendar"]?.dictionaryValue
+    static let shared = CalendarManager()
+
+    private var config: ConfigData? {
+        ConfigManager.shared.globalWidgetConfig(for: "default.time")["calendar"]?.dictionaryValue
     }
     var allowList: [String] {
         Array(
@@ -24,8 +25,7 @@ class CalendarManager: ObservableObject {
     private let eventStore = EKEventStore()
     private var timer: Timer?
 
-    init(configProvider: ConfigProvider) {
-        self.configProvider = configProvider
+    private init() {
         requestAccess()
         startMonitoring()
     }

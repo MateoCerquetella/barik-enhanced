@@ -23,6 +23,7 @@ enum WifiSignalStrength: String {
 final class NetworkStatusViewModel: NSObject, ObservableObject,
     CLLocationManagerDelegate
 {
+    static let shared = NetworkStatusViewModel()
 
     // States for Wi‑Fi and Ethernet obtained via NWPathMonitor.
     @Published var wifiState: NetworkState = .disconnected
@@ -55,7 +56,7 @@ final class NetworkStatusViewModel: NSObject, ObservableObject,
     private var timer: Timer?
     private let locationManager = CLLocationManager()
 
-    override init() {
+    private override init() {
         super.init()
         locationManager.delegate = self
         locationManager.requestWhenInUseAuthorization()

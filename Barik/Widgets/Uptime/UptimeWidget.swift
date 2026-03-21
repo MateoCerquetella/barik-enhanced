@@ -2,7 +2,7 @@ import SwiftUI
 
 struct UptimeWidget: View {
     @EnvironmentObject var configProvider: ConfigProvider
-    @StateObject private var uptimeManager = UptimeManager()
+    @ObservedObject private var uptimeManager = UptimeManager.shared
 
     var body: some View {
         HStack(spacing: 4) {

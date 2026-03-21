@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SpacesWidget: View {
-    @StateObject var viewModel = SpacesViewModel()
+    @ObservedObject var viewModel = SpacesViewModel.shared
 
     @ObservedObject var configManager = ConfigManager.shared
     var foregroundHeight: CGFloat { configManager.config.experimental.foreground.resolveHeight() }
