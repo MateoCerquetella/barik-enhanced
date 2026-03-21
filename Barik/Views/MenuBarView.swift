@@ -4,6 +4,7 @@ struct MenuBarView: View {
     @ObservedObject var configManager = ConfigManager.shared
     @State private var draggedItem: TomlWidgetItem?
     @State private var displayedItems: [TomlWidgetItem] = []
+    @State private var settingsRect: CGRect = .zero
 
     var body: some View {
         let theme: ColorScheme? =
@@ -43,16 +44,24 @@ struct MenuBarView: View {
             }
 
             // Settings gear button
-            Button(action: {
-                WidgetConfiguratorWindow.show()
-            }) {
-                Image(systemName: "gearshape.fill")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.3))
-            }
-            .buttonStyle(PlainButtonStyle())
-            .padding(.leading, 8)
-            .help("Configure Widgets")
+            Image(systemName: "gearshape.fill")
+                .font(.system(size: 12))
+                .foregroundStyle(.white.opacity(0.4))
+                .frame(maxHeight: .infinity)
+                .background(
+                    GeometryReader { geometry in
+                        Color.clear
+                            .onAppear { settingsRect = geometry.frame(in: .global) }
+                            .onChange(of: geometry.frame(in: .global)) { _, newState in settingsRect = newState }
+                    }
+                )
+                .background(.black.opacity(0.001))
+                .onTapGesture {
+                    MenuBarPopup.show(rect: settingsRect, id: "settings") {
+                        SettingsMenuView()
+                    }
+                }
+                .padding(.leading, 8)
 
             if !displayedItems.contains(where: { $0.id == "system-banner" }) {
                 SystemBannerWidget(withLeftPadding: true)
