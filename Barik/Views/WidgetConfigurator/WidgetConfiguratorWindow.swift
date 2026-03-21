@@ -21,7 +21,7 @@ class WidgetConfiguratorWindow {
         )
 
         newWindow.contentView = hostingView
-        newWindow.title = "Barik - Widget Configuration"
+        newWindow.title = "Barik Enhanced - Widget Configuration"
         newWindow.center()
         newWindow.isReleasedWhenClosed = false
         newWindow.titlebarAppearsTransparent = true

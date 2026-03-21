@@ -45,7 +45,7 @@ struct MenuBarView: View {
                     openConfigFile()
                 }
                 Divider()
-                Button("Quit Barik") {
+                Button("Quit Barik Enhanced") {
                     NSApp.terminate(nil)
                 }
             }
@@ -76,7 +76,7 @@ struct MenuBarView: View {
         }
         .foregroundStyle(Color.foregroundOutside)
         .frame(height: max(configManager.config.experimental.foreground.resolveHeight(), 1.0))
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: configManager.config.experimental.position == .bottom ? .bottom : .top)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: configManager.config.experimental.position == .bottom ? .bottomLeading : .topLeading)
         .padding(.horizontal, configManager.config.experimental.foreground.horizontalPadding)
         .background(.black.opacity(0.001))
         .preferredColorScheme(theme)

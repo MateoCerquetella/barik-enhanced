@@ -62,7 +62,7 @@ final class MenuBarContextMenu: NSMenu, NSMenuDelegate {
         menu.addItem(editItem)
 
         let quitItem = NSMenuItem(
-            title: "Quit Barik",
+            title: "Quit Barik Enhanced",
             action: #selector(quitApp),
             keyEquivalent: "")
         quitItem.target = self
