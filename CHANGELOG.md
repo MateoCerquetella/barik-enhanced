@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.1
+
+### Improvements
+- Fix widget spacing on small screens (MacBook) — widgets no longer wrap or overlap
+- Fix changelog popup pointing to wrong repository
+- Fix "What's new" banner leaving empty gap when dismissed
+- Auto-detect native macOS status area width precisely using invisible probe
+- Updater now checks for updates from the correct repository
+
 ## 1.1.0
 
 ### Bug Fixes
