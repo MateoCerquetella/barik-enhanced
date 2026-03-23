@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.1.0
+
+### Bug Fixes
+- **CPU Monitor**: Fixed CPU usage always showing 0%. The previous implementation used an incorrect `sysctlbyname("vm.loadavg")` call that always failed. Switched to `host_processor_info()` with proper memory management.
+- **Memory Safety**: Fixed a use-after-free bug in the CPU monitor that caused memory corruption. A `defer` block was incorrectly freeing memory still needed for delta calculations between update cycles.
+- **Widget Overlap**: Fixed Barik widgets overlapping with native macOS status bar items (WiFi, battery, clock, Control Center). Added automatic detection of the system status area width using an invisible `NSStatusItem` probe.
+
+### Improvements
+- Right padding now dynamically adjusts to the actual width of native macOS menu bar items
+- CPU usage now shows accurate per-core aggregated values with user/system breakdown
+
+## 1.0.0
+
+### Barik Enhanced — Initial Release
+- Fork of Barik by mocki-toki, rebranded as Barik Enhanced
+- 20+ configurable widgets: CPU/RAM, Network Activity, Battery, Weather, Now Playing, Spaces, Volume, Brightness, and more
+- TOML-based configuration with hot-reload
+- Multi-monitor support
+- Drag-and-drop widget reordering
+- Widget configurator UI
+- Homebrew installation support
+
 ## 0.5.1
 
 > This release was supported by **ALinuxPerson** _(help with the appearance configuration, 1 issue)_, **bake** _(1 issue)_ and **Oery** _(1 issue)_

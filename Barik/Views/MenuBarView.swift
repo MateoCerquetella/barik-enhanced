@@ -22,6 +22,7 @@ struct MenuBarView: View {
             HStack(spacing: configManager.config.experimental.foreground.spacing) {
                 ForEach(displayedItems) { item in
                     buildView(for: item)
+                        .lineLimit(1)
                         .onDrag {
                             draggedItem = item
                             return NSItemProvider(object: item.id as NSString)
@@ -76,6 +77,7 @@ struct MenuBarView: View {
             }
         }
         .foregroundStyle(Color.foregroundOutside)
+        .clipped()
         .frame(height: max(configManager.config.experimental.foreground.resolveHeight(), 1.0))
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: configManager.config.experimental.position == .bottom ? .bottomLeading : .topLeading)
         .padding(.leading, configManager.config.experimental.foreground.horizontalPadding)
@@ -174,7 +176,7 @@ struct MenuBarView: View {
                 .environmentObject(config)
 
         case "spacer":
-            Spacer().frame(minWidth: 50, maxWidth: .infinity)
+            Spacer().frame(minWidth: 8, maxWidth: .infinity)
 
         case "divider":
             Rectangle()

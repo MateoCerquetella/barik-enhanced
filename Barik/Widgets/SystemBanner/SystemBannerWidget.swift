@@ -26,15 +26,13 @@ struct SystemBannerWidget: View {
     }
 
     var body: some View {
-        HStack(spacing: 15) {
-            if withLeftPadding {
-                Color.clear.frame(width: 0)
-            }
+        HStack(spacing: 8) {
             UpdateBannerWidget()
             if showWhatsNew {
                 ChangelogBannerWidget()
             }
-        }.onReceive(NotificationCenter.default.publisher(for: Notification.Name("ShowWhatsNewBanner"))) { _ in
+        }
+        .padding(.leading, withLeftPadding ? 8 : 0).onReceive(NotificationCenter.default.publisher(for: Notification.Name("ShowWhatsNewBanner"))) { _ in
             withAnimation {
                 showWhatsNew = true
             }

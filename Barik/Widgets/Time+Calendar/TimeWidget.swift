@@ -35,6 +35,7 @@ struct TimeWidget: View {
             }
         }
         .font(.headline)
+        .lineLimit(1)
         .foregroundStyle(.foregroundOutside)
         .shadow(color: .foregroundShadowOutside, radius: 3)
         .onReceive(timer) { date in

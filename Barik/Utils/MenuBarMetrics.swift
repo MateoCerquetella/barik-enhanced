@@ -4,59 +4,59 @@ import Combine
 /// Detects the width of the native macOS system status area (WiFi, battery,
 /// clock, Control Center, etc.) so Barik's widgets can avoid overlapping them.
 ///
-/// Works by creating a zero-width NSStatusItem whose window position tells us
-/// where the system items begin from the left edge of the screen.
+/// Works by placing a tiny NSStatusItem at the left edge of the status area.
+/// Its window x-coordinate tells us where native items begin.
 final class MenuBarMetrics: ObservableObject {
     static let shared = MenuBarMetrics()
 
-    /// The width (in points) of the area occupied by native status items,
-    /// including a small breathing-room margin.
-    @Published var systemStatusAreaWidth: CGFloat = 220
+    /// The width (in points) of the area occupied by native status items.
+    @Published var systemStatusAreaWidth: CGFloat = 0
 
     private var statusItem: NSStatusItem?
     private var timer: Timer?
+    private var hasDetected = false
 
     private init() {}
 
     func startDetecting() {
-        // Zero-width status item — invisible but gives us a position probe.
-        statusItem = NSStatusBar.system.statusItem(withLength: 0)
+        // 1-pixel wide status item — practically invisible.
+        statusItem = NSStatusBar.system.statusItem(withLength: 1)
+        statusItem?.button?.alphaValue = 0
 
-        // Initial detection after the status item gets a window.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+        // Retry detection until it succeeds.
+        timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
             self?.detect()
         }
 
-        // Periodic re-detection (system items can change width, e.g. clock
-        // format, new third-party items, battery icon changes).
-        timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+        // Also try immediately after a short delay.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             self?.detect()
-        }
-
-        // Re-detect when screens change (external display connected, etc.)
-        NotificationCenter.default.addObserver(
-            forName: NSApplication.didChangeScreenParametersNotification,
-            object: nil, queue: .main
-        ) { [weak self] _ in
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-                self?.detect()
-            }
         }
     }
 
     private func detect() {
-        guard let window = statusItem?.button?.window,
+        guard let button = statusItem?.button,
+              let window = button.window,
               let screen = window.screen ?? NSScreen.main else { return }
 
-        let rightEdge = window.frame.origin.x + window.frame.width
-        let screenWidth = screen.frame.width
-        let width = screenWidth - rightEdge + 16 // +16 breathing room
+        // Our status item sits at the left edge of all status items.
+        // Everything to its right is native/third-party status items.
+        let probeRightEdge = window.frame.origin.x + window.frame.width
+        let screenMaxX = screen.frame.maxX
+        let width = screenMaxX - probeRightEdge + 4
 
-        // Sanity: at least 50px, at most half the screen.
-        if width > 50 && width < screenWidth * 0.5 {
-            // Only publish when the change is meaningful (>2px).
-            if abs(systemStatusAreaWidth - width) > 2 {
+        if width > 10 && width < screenMaxX * 0.5 {
+            if !hasDetected || abs(systemStatusAreaWidth - width) > 2 {
                 systemStatusAreaWidth = width
+                hasDetected = true
+            }
+        }
+
+        // Once detected, slow down the timer.
+        if hasDetected {
+            timer?.invalidate()
+            timer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { [weak self] _ in
+                self?.detect()
             }
         }
     }
