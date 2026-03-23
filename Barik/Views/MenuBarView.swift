@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MenuBarView: View {
     @ObservedObject var configManager = ConfigManager.shared
+    @ObservedObject var menuBarMetrics = MenuBarMetrics.shared
     @State private var draggedItem: TomlWidgetItem?
     @State private var displayedItems: [TomlWidgetItem] = []
     @State private var settingsRect: CGRect = .zero
@@ -77,7 +78,8 @@ struct MenuBarView: View {
         .foregroundStyle(Color.foregroundOutside)
         .frame(height: max(configManager.config.experimental.foreground.resolveHeight(), 1.0))
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: configManager.config.experimental.position == .bottom ? .bottomLeading : .topLeading)
-        .padding(.horizontal, configManager.config.experimental.foreground.horizontalPadding)
+        .padding(.leading, configManager.config.experimental.foreground.horizontalPadding)
+        .padding(.trailing, max(configManager.config.experimental.foreground.horizontalPadding, menuBarMetrics.systemStatusAreaWidth))
         .background(.black.opacity(0.001))
         .preferredColorScheme(theme)
         .onAppear {

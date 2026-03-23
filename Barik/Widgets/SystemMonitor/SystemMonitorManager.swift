@@ -143,7 +143,7 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
     private func updateAllMetrics() {
         // Add safety checks to prevent hanging
         autoreleasepool {
-            updateCPUUsageSimple()
+            updateCPUUsage()
             updateRAMUsage()
             updateNetworkActivity()
         }
@@ -174,12 +174,12 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
         }
     }
     
-    // MARK: - CPU Usage (Complex - Currently Disabled Due to Memory Issues)
+    // MARK: - CPU Usage (via host_processor_info)
     private func updateCPUUsage() {
         var cpuInfoArray: processor_info_array_t?
         var cpuInfoCount: mach_msg_type_number_t = 0
         var numCpus: natural_t = 0
-        
+
         let result = host_processor_info(
             mach_host_self(),
             PROCESSOR_CPU_LOAD_INFO,
@@ -187,7 +187,7 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
             &cpuInfoArray,
             &cpuInfoCount
         )
-        
+
         guard result == KERN_SUCCESS, let cpuInfo = cpuInfoArray, numCpus > 0 else {
             // If CPU info fails, reset to safe values
             DispatchQueue.main.async {
@@ -198,13 +198,11 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
             }
             return
         }
-        
-        defer {
-            if cpuInfoCount > 0 {
-                vm_deallocate(mach_task_self_, vm_address_t(bitPattern: cpuInfo), vm_size_t(cpuInfoCount) * vm_size_t(MemoryLayout<integer_t>.size))
-            }
-        }
-        
+
+        // NOTE: Do NOT use defer to free cpuInfo here — we store it in
+        // previousCpuInfo for delta calculation on the next tick.
+        // The old previousCpuInfo is freed below before being replaced.
+
         let cpuLoadInfo = cpuInfo.withMemoryRebound(to: processor_cpu_load_info.self, capacity: Int(numCpus)) { $0 }
         
         var totalUser: UInt32 = 0

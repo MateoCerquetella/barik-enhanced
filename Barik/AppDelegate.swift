@@ -29,6 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         
         MenuBarPopup.setup()
+        MenuBarMetrics.shared.startDetecting()
         setupPanels()
 
         NotificationCenter.default.addObserver(
