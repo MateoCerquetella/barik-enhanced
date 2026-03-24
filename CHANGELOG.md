@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.2
+
+### Bug Fixes
+- **Background bar trailing gap**: Fixed recurring gap between the background bar's right edge and the system status area. Removed inflated measurement offset and added overlap margin so the background always reaches the system icons cleanly.
+
 ## 1.2.1
 
 ### Bug Fixes

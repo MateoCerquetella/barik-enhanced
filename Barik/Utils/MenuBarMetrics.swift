@@ -43,7 +43,7 @@ final class MenuBarMetrics: ObservableObject {
         // Everything to its right is native/third-party status items.
         let probeRightEdge = window.frame.origin.x + window.frame.width
         let screenMaxX = screen.frame.maxX
-        let width = screenMaxX - probeRightEdge + 4
+        let width = screenMaxX - probeRightEdge
 
         if width > 10 && width < screenMaxX * 0.5 {
             if !hasDetected || abs(systemStatusAreaWidth - width) > 2 {

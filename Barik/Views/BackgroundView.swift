@@ -17,7 +17,7 @@ struct BackgroundView: View {
         let menuBarHeight = (configManager.config.experimental.foreground.resolveHeight() ?? 32) - 6
         
         let isBottom = configManager.config.experimental.position == .bottom
-        let trailingPad = max(CGFloat(6), menuBarMetrics.systemStatusAreaWidth)
+        let trailingPad = max(CGFloat(6), menuBarMetrics.systemStatusAreaWidth - 6)
 
         return VStack(spacing: 0) {
             if !isBottom {
