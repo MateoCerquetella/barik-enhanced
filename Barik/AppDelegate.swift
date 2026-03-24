@@ -37,10 +37,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             selector: #selector(screenParametersDidChange(_:)),
             name: NSApplication.didChangeScreenParametersNotification,
             object: nil)
+
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(systemDidWake(_:)),
+            name: NSWorkspace.didWakeNotification,
+            object: nil)
     }
 
     @objc private func screenParametersDidChange(_ notification: Notification) {
         setupPanels()
+    }
+
+    @objc private func systemDidWake(_ notification: Notification) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+            self?.setupPanels()
+        }
     }
 
     /// Configures and displays the background and menu bar panels.
@@ -72,9 +84,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let screenFrame = screen.frame
 
             if index < backgroundPanels.count {
-                // Update existing panel
+                // Update existing panel — re-apply frame and level to recover from
+                // corrupted state after system crashes or sleep/wake cycles
                 backgroundPanels[index].setFrame(screenFrame, display: true)
+                backgroundPanels[index].level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)))
                 menuBarPanels[index].setFrame(screenFrame, display: true)
+                menuBarPanels[index].level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.backstopMenu)))
             } else {
                 // Create new panels
                 let backgroundPanel = createPanel(
