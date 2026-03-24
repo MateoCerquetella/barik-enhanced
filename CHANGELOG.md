@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.1
+
+### Bug Fixes
+- **Background bar gap**: Fixed the background bar extending beyond widget area after updates, causing a visible black gap between the last widget and the right edge. Background now respects system status area width on the trailing side.
+
 ## 1.2.0
 
 ### Bug Fixes

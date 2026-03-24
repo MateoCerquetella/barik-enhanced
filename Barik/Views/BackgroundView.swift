@@ -2,6 +2,7 @@ import SwiftUI
 
 struct BackgroundView: View {
     @ObservedObject var configManager = ConfigManager.shared
+    @ObservedObject var menuBarMetrics = MenuBarMetrics.shared
 
     private func menuBarBlurView(_ geometry: GeometryProxy) -> some View {
         let theme: ColorScheme? = {
@@ -16,7 +17,8 @@ struct BackgroundView: View {
         let menuBarHeight = (configManager.config.experimental.foreground.resolveHeight() ?? 32) - 6
         
         let isBottom = configManager.config.experimental.position == .bottom
-        
+        let trailingPad = max(CGFloat(6), menuBarMetrics.systemStatusAreaWidth)
+
         return VStack(spacing: 0) {
             if !isBottom {
                 // Top positioning (original)
@@ -25,7 +27,8 @@ struct BackgroundView: View {
                     RoundedRectangle(cornerRadius: 12)
                         .fill(Color.black.opacity(0.6))
                         .frame(height: menuBarHeight)
-                        .padding(.horizontal, 6)
+                        .padding(.leading, 6)
+                        .padding(.trailing, trailingPad)
                         .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 1)
                 } else {
                     RoundedRectangle(cornerRadius: 12)
@@ -35,12 +38,14 @@ struct BackgroundView: View {
                             in: RoundedRectangle(cornerRadius: 12)
                         )
                         .frame(height: menuBarHeight)
-                        .padding(.horizontal, 6)
+                        .padding(.leading, 6)
+                        .padding(.trailing, trailingPad)
                         .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 2)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
                                 .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
-                                .padding(.horizontal, 6)
+                                .padding(.leading, 6)
+                                .padding(.trailing, trailingPad)
                         )
                 }
                 Spacer()
@@ -51,7 +56,8 @@ struct BackgroundView: View {
                     RoundedRectangle(cornerRadius: 12)
                         .fill(Color.black.opacity(0.6))
                         .frame(height: menuBarHeight)
-                        .padding(.horizontal, 6)
+                        .padding(.leading, 6)
+                        .padding(.trailing, trailingPad)
                         .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: -1)
                 } else {
                     RoundedRectangle(cornerRadius: 12)
@@ -61,12 +67,14 @@ struct BackgroundView: View {
                             in: RoundedRectangle(cornerRadius: 12)
                         )
                         .frame(height: menuBarHeight)
-                        .padding(.horizontal, 6)
+                        .padding(.leading, 6)
+                        .padding(.trailing, trailingPad)
                         .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: -2)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
                                 .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
-                                .padding(.horizontal, 6)
+                                .padding(.leading, 6)
+                                .padding(.trailing, trailingPad)
                         )
                 }
             }
