@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0
+
+### Bug Fixes
+- **Window Level Recovery**: Fixed widgets appearing on top of everything after a system crash or freeze. Panel window levels are now re-applied automatically to self-correct corrupted z-ordering.
+
+### Improvements
+- Added wake-from-sleep observer to reset panels after sleep/wake cycles, preventing stale window state
+
 ## 1.1.1
 
 ### Improvements
