@@ -24,6 +24,7 @@ let allWidgets: [WidgetDefinition] = [
     WidgetDefinition(id: "default.uptime", name: "Uptime", icon: "clock.arrow.circlepath", description: "System uptime"),
     WidgetDefinition(id: "default.pomodoro", name: "Pomodoro", icon: "timer", description: "Focus timer"),
     WidgetDefinition(id: "default.performance", name: "Performance", icon: "gauge.with.dots.needle.bottom.50percent", description: "Performance mode"),
+    WidgetDefinition(id: "default.reload", name: "Reload", icon: "arrow.clockwise", description: "Manual refresh for config and widgets"),
     WidgetDefinition(id: "default.keyboardlayout", name: "Keyboard", icon: "keyboard", description: "Input source"),
     WidgetDefinition(id: "default.claude-usage", name: "Claude Usage", icon: "sparkle", description: "Claude API rate limit tracking"),
     WidgetDefinition(id: "default.codex-usage", name: "Codex Usage", icon: "terminal", description: "OpenAI Codex usage tracking"),

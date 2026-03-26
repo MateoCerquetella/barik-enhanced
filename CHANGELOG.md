@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.3
+
+### Bug Fixes
+- **AeroSpace Spaces widget**: Fixed the Spaces widget getting stale after long uptimes, wake cycles, day changes, or transient AeroSpace command failures. The widget now re-detects the provider, refreshes on recovery events, and keeps the last good state instead of clearing itself on temporary errors.
+
+### Improvements
+- Added a new **Reload** widget to manually reload config and refresh widgets from the menu bar
+- Improved AeroSpace command execution with timeout handling and reduced redundant queries
+- Restored the app display name/version for the new release
+
 ## 1.2.2
 
 ### Bug Fixes

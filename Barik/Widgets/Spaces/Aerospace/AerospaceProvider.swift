@@ -2,31 +2,40 @@ import Foundation
 
 class AerospaceSpacesProvider: SpacesProvider, SwitchableSpacesProvider {
     typealias SpaceType = AeroSpace
-    let executablePath = ConfigManager.shared.config.aerospace.path
+    private var executablePath: String { ConfigManager.shared.config.aerospace.path }
+    private let commandTimeout: DispatchTimeInterval = .seconds(2)
 
     func getSpacesWithWindows() -> [AeroSpace]? {
-        guard var spaces = fetchSpaces(), let windows = fetchWindows() else {
+        guard
+            var spaces = fetchSpaces(),
+            let windows = fetchWindows()
+        else {
             return nil
         }
-        if let focusedSpace = fetchFocusedSpace() {
+
+        let focusedSpace = fetchFocusedSpace()
+        if let focusedSpace {
             for i in 0..<spaces.count {
                 spaces[i].isFocused = (spaces[i].id == focusedSpace.id)
             }
         }
+
         let focusedWindow = fetchFocusedWindow()
         var spaceDict = Dictionary(
             uniqueKeysWithValues: spaces.map { ($0.id, $0) })
+
         for window in windows {
             var mutableWindow = window
             if let focused = focusedWindow, window.id == focused.id {
                 mutableWindow.isFocused = true
             }
+
             if let ws = mutableWindow.workspace, !ws.isEmpty {
                 if var space = spaceDict[ws] {
                     space.windows.append(mutableWindow)
                     spaceDict[ws] = space
                 }
-            } else if let focusedSpace = fetchFocusedSpace() {
+            } else if let focusedSpace {
                 if var space = spaceDict[focusedSpace.id] {
                     space.windows.append(mutableWindow)
                     spaceDict[focusedSpace.id] = space
@@ -52,16 +61,38 @@ class AerospaceSpacesProvider: SpacesProvider, SwitchableSpacesProvider {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executablePath)
         process.arguments = arguments
-        let pipe = Pipe()
-        process.standardOutput = pipe
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+        process.standardOutput = outputPipe
+        process.standardError = errorPipe
+
+        let exitGroup = DispatchGroup()
+        exitGroup.enter()
+        process.terminationHandler = { _ in
+            exitGroup.leave()
+        }
+
         do {
             try process.run()
         } catch {
             print("Aerospace error: \(error)")
             return nil
         }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
+
+        if exitGroup.wait(timeout: .now() + commandTimeout) == .timedOut {
+            process.terminate()
+            print("Aerospace command timed out: \(arguments.joined(separator: " "))")
+            return nil
+        }
+
+        let data = outputPipe.fileHandleForReading.readDataToEndOfFile()
+        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+        guard process.terminationStatus == 0 else {
+            let stderr = String(data: errorData, encoding: .utf8) ?? ""
+            print("Aerospace command failed (\(process.terminationStatus)): \(stderr)")
+            return nil
+        }
+
         return data
     }
 

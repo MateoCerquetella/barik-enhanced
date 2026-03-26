@@ -18,6 +18,7 @@ final class MenuBarContextMenu: NSMenu, NSMenuDelegate {
         ("default.uptime", "Uptime"),
         ("default.pomodoro", "Pomodoro"),
         ("default.performance", "Performance"),
+        ("default.reload", "Reload"),
         ("default.keyboardlayout", "Keyboard"),
         ("default.claude-usage", "Claude Usage"),
         ("default.codex-usage", "Codex Usage"),

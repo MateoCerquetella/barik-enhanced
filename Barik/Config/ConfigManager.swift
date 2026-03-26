@@ -86,6 +86,7 @@ final class ConfigManager: ObservableObject {
                 "default.cpuram",
                 "default.networkactivity",
                 "default.performance",
+                "default.reload",
                 "divider",
                 # { "default.time" = { time-zone = "America/Los_Angeles", format = "E d, hh:mm" } },
                 "default.time"
@@ -123,6 +124,10 @@ final class ConfigManager: ObservableObject {
             # Performance mode widget - replaces volume widget
             # Controls energy consumption by adjusting update intervals
             # Modes: battery-saver (default), balanced, max-performance
+
+            [widgets.default.reload]
+            show-label = false
+            label = "Reload"
 
             [popup.default.time]
             view-variant = "box"

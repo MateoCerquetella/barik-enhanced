@@ -159,6 +159,10 @@ struct MenuBarView: View {
             PerformanceModeWidget()
                 .environmentObject(config)
 
+        case "default.reload":
+            ReloadWidget()
+                .environmentObject(config)
+
         case "default.keyboardlayout":
             KeyboardLayoutWidget()
                 .environmentObject(config)
@@ -259,5 +263,48 @@ struct MenuBarView: View {
         }
 
         return lines.joined(separator: "\n")
+    }
+}
+
+private struct ReloadWidget: View {
+    @EnvironmentObject var configProvider: ConfigProvider
+
+    private var config: ConfigData { configProvider.config }
+    private var showLabel: Bool { config["show-label"]?.boolValue ?? false }
+    private var label: String { config["label"]?.stringValue ?? "Reload" }
+
+    @State private var isReloading = false
+
+    var body: some View {
+        HStack(spacing: showLabel ? 5 : 0) {
+            Image(systemName: "arrow.clockwise")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.icon)
+                .rotationEffect(.degrees(isReloading ? 360 : 0))
+                .animation(.easeInOut(duration: 0.45), value: isReloading)
+
+            if showLabel {
+                Text(label)
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.foregroundOutside)
+            }
+        }
+        .experimentalConfiguration(cornerRadius: 15)
+        .frame(maxHeight: .infinity)
+        .background(.black.opacity(0.001))
+        .contentShape(Rectangle())
+        .onTapGesture {
+            isReloading = true
+            ConfigManager.shared.reloadConfig()
+            SpacesViewModel.shared.forceRefresh()
+            NotificationCenter.default.post(
+                name: Notification.Name("ManualReloadTriggered"),
+                object: nil
+            )
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                isReloading = false
+            }
+        }
+        .help("Reload config and refresh widgets")
     }
 }
