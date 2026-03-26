@@ -20,19 +20,29 @@ struct SystemBannerWidget: View {
     let withLeftPadding: Bool
     
     @State private var showWhatsNew: Bool = false
+    @StateObject private var updater = AppUpdater()
     
     init(withLeftPadding: Bool = false) {
         self.withLeftPadding = withLeftPadding
     }
 
+    private var hasVisibleContent: Bool {
+        updater.updateAvailable || showWhatsNew
+    }
+
     var body: some View {
-        HStack(spacing: 8) {
-            UpdateBannerWidget()
-            if showWhatsNew {
-                ChangelogBannerWidget()
+        Group {
+            if hasVisibleContent {
+                HStack(spacing: 8) {
+                    UpdateBannerWidget(updater: updater)
+                    if showWhatsNew {
+                        ChangelogBannerWidget()
+                    }
+                }
+                .padding(.leading, withLeftPadding ? 8 : 0)
             }
         }
-        .padding(.leading, withLeftPadding ? 8 : 0).onReceive(NotificationCenter.default.publisher(for: Notification.Name("ShowWhatsNewBanner"))) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ShowWhatsNewBanner"))) { _ in
             withAnimation {
                 showWhatsNew = true
             }

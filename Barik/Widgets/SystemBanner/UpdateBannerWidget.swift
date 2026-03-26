@@ -1,8 +1,7 @@
 import SwiftUI
 
 struct UpdateBannerWidget: View {
-    @ObservedObject private var configManager = ConfigManager.shared
-    @StateObject private var updater = AppUpdater()
+    @ObservedObject var updater: AppUpdater
     @State private var isUpdating = false
 
     var body: some View {
@@ -31,7 +30,7 @@ struct UpdateBannerWidget: View {
 
 struct UpdateBannerWidget_Previews: PreviewProvider {
     static var previews: some View {
-        UpdateBannerWidget()
+        UpdateBannerWidget(updater: AppUpdater())
             .frame(width: 200, height: 100)
             .background(Color.black)
     }
