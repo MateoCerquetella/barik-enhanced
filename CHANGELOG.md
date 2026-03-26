@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.4
+
+### Bug Fixes
+- **What's New / Update banner spacing**: Fixed the system banner reserving empty space between the settings gear and the trailing edge when no visible banner was being shown. The banner container now collapses completely unless it has real content.
+
 ## 1.2.3
 
 ### Bug Fixes
