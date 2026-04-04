@@ -10,6 +10,10 @@ struct ClaudeUsageWidget: View {
         usageManager.usageData.fiveHourPercentage
     }
 
+    private var thresholdConfiguration: UsageThresholdConfiguration {
+        UsageThresholdConfiguration(config: configProvider.config)
+    }
+
     private var weeklyRemaining: Double {
         max(0, min(1, 1 - usageManager.usageData.weeklyPercentage))
     }
@@ -19,9 +23,7 @@ struct ClaudeUsageWidget: View {
     }
 
     private var ringColor: Color {
-        if percentage >= 0.8 { return .red }
-        if percentage >= 0.6 { return .orange }
-        return .white
+        thresholdConfiguration.color(for: percentage)
     }
 
     var body: some View {

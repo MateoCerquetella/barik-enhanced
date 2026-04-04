@@ -10,14 +10,16 @@ struct CodexUsageWidget: View {
         usageManager.usageData.primaryPercentage
     }
 
+    private var thresholdConfiguration: UsageThresholdConfiguration {
+        UsageThresholdConfiguration(config: configProvider.config)
+    }
+
     private var remainingPercentage: Double {
         max(0, min(1, 1 - percentage))
     }
 
     private var ringColor: Color {
-        if percentage >= 0.8 { return .red }
-        if percentage >= 0.6 { return .orange }
-        return .white
+        thresholdConfiguration.color(for: percentage)
     }
 
     var body: some View {

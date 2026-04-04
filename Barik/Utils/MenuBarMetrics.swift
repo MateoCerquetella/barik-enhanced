@@ -19,6 +19,8 @@ final class MenuBarMetrics: ObservableObject {
     private init() {}
 
     func startDetecting() {
+        stopDetecting()
+
         // 1-pixel wide status item — practically invisible.
         statusItem = NSStatusBar.system.statusItem(withLength: 1)
         statusItem?.button?.alphaValue = 0
@@ -32,6 +34,11 @@ final class MenuBarMetrics: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             self?.detect()
         }
+    }
+
+    func restartDetection() {
+        hasDetected = false
+        startDetecting()
     }
 
     private func detect() {
@@ -61,10 +68,17 @@ final class MenuBarMetrics: ObservableObject {
         }
     }
 
-    deinit {
+    private func stopDetecting() {
         timer?.invalidate()
+        timer = nil
+
         if let item = statusItem {
             NSStatusBar.system.removeStatusItem(item)
         }
+        statusItem = nil
+    }
+
+    deinit {
+        stopDetecting()
     }
 }

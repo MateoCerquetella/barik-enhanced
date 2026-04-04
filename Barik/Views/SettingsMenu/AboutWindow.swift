@@ -88,7 +88,7 @@ struct AboutView: View {
 
             // Links
             HStack(spacing: 24) {
-                Link(destination: URL(string: "https://github.com/MateoCerquetella/barik")!) {
+                Link(destination: URL(string: "https://github.com/MateoCerquetella/barik-enhanced")!) {
                     HStack(spacing: 4) {
                         Image(systemName: "star.fill")
                             .font(.system(size: 10))

@@ -129,6 +129,14 @@ final class ConfigManager: ObservableObject {
             show-label = false
             label = "Reload"
 
+            [widgets.default.claude-usage]
+            warning-threshold = 60
+            critical-threshold = 80
+
+            [widgets.default.codex-usage]
+            warning-threshold = 60
+            critical-threshold = 80
+
             [popup.default.time]
             view-variant = "box"
             
@@ -178,7 +186,7 @@ final class ConfigManager: ObservableObject {
         fileWatchSource = nil
     }
 
-    func updateConfigValue(key: String, newValue: String) {
+    func updateConfigValue(key: String, newValue: String, wrapInQuotes: Bool = true) {
         guard let path = configFilePath else {
             print("Config file path is not set")
             return
@@ -186,7 +194,11 @@ final class ConfigManager: ObservableObject {
         do {
             let currentText = try String(contentsOfFile: path, encoding: .utf8)
             let updatedText = updatedTOMLString(
-                original: currentText, key: key, newValue: newValue)
+                original: currentText,
+                key: key,
+                newValue: newValue,
+                wrapInQuotes: wrapInQuotes
+            )
             try updatedText.write(
                 toFile: path, atomically: false, encoding: .utf8)
             DispatchQueue.main.async {
@@ -198,8 +210,13 @@ final class ConfigManager: ObservableObject {
     }
 
     private func updatedTOMLString(
-        original: String, key: String, newValue: String
+        original: String,
+        key: String,
+        newValue: String,
+        wrapInQuotes: Bool
     ) -> String {
+        let renderedValue = wrapInQuotes ? "\"\(newValue)\"" : newValue
+
         if key.contains(".") {
             let components = key.split(separator: ".").map(String.init)
             guard components.count >= 2 else {
@@ -220,7 +237,7 @@ final class ConfigManager: ObservableObject {
                 let trimmed = line.trimmingCharacters(in: .whitespaces)
                 if trimmed.hasPrefix("[") && trimmed.hasSuffix("]") {
                     if insideTargetTable && !updatedKey {
-                        newLines.append("\(actualKey) = \"\(newValue)\"")
+                        newLines.append("\(actualKey) = \(renderedValue)")
                         updatedKey = true
                     }
                     if trimmed == tableHeader {
@@ -237,7 +254,7 @@ final class ConfigManager: ObservableObject {
                         if line.range(of: pattern, options: .regularExpression)
                             != nil
                         {
-                            newLines.append("\(actualKey) = \"\(newValue)\"")
+                            newLines.append("\(actualKey) = \(renderedValue)")
                             updatedKey = true
                             continue
                         }
@@ -247,13 +264,13 @@ final class ConfigManager: ObservableObject {
             }
 
             if foundTable && insideTargetTable && !updatedKey {
-                newLines.append("\(actualKey) = \"\(newValue)\"")
+                newLines.append("\(actualKey) = \(renderedValue)")
             }
 
             if !foundTable {
                 newLines.append("")
                 newLines.append("[\(tablePath)]")
-                newLines.append("\(actualKey) = \"\(newValue)\"")
+                newLines.append("\(actualKey) = \(renderedValue)")
             }
             return newLines.joined(separator: "\n")
         } else {
@@ -269,7 +286,7 @@ final class ConfigManager: ObservableObject {
                     if line.range(of: pattern, options: .regularExpression)
                         != nil
                     {
-                        newLines.append("\(key) = \"\(newValue)\"")
+                        newLines.append("\(key) = \(renderedValue)")
                         updatedAtLeastOnce = true
                         continue
                     }
@@ -277,7 +294,7 @@ final class ConfigManager: ObservableObject {
                 newLines.append(line)
             }
             if !updatedAtLeastOnce {
-                newLines.append("\(key) = \"\(newValue)\"")
+                newLines.append("\(key) = \(renderedValue)")
             }
             return newLines.joined(separator: "\n")
         }

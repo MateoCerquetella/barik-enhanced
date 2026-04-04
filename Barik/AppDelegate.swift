@@ -43,6 +43,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             selector: #selector(systemDidWake(_:)),
             name: NSWorkspace.didWakeNotification,
             object: nil)
+
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(sessionDidBecomeActive(_:)),
+            name: NSWorkspace.sessionDidBecomeActiveNotification,
+            object: nil)
+
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(screensDidWake(_:)),
+            name: NSWorkspace.screensDidWakeNotification,
+            object: nil)
     }
 
     @objc private func screenParametersDidChange(_ notification: Notification) {
@@ -51,6 +63,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func systemDidWake(_ notification: Notification) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+            MenuBarMetrics.shared.restartDetection()
+            self?.setupPanels()
+        }
+    }
+
+    @objc private func sessionDidBecomeActive(_ notification: Notification) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            MenuBarMetrics.shared.restartDetection()
+            self?.setupPanels()
+        }
+    }
+
+    @objc private func screensDidWake(_ notification: Notification) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            MenuBarMetrics.shared.restartDetection()
             self?.setupPanels()
         }
     }

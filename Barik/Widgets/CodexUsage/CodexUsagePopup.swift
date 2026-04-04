@@ -3,14 +3,27 @@ import SwiftUI
 struct CodexUsagePopup: View {
     @EnvironmentObject var configProvider: ConfigProvider
     @ObservedObject private var usageManager = CodexUsageManager.shared
+    @State private var showSettings = false
+
+    private var thresholdConfiguration: UsageThresholdConfiguration {
+        UsageThresholdConfiguration(config: configProvider.config)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if !usageManager.isConnected {
+            titleBar
+            Divider().background(Color.white.opacity(0.2))
+
+            if showSettings {
+                UsageThresholdSettingsView(
+                    title: "Codex",
+                    widgetConfigKey: "default.codex-usage",
+                    accentColor: .blue,
+                    initialConfiguration: thresholdConfiguration
+                )
+            } else if !usageManager.isConnected {
                 connectView
             } else if usageManager.usageData.isAvailable {
-                titleBar
-                Divider().background(Color.white.opacity(0.2))
                 rateLimitSection(
                     icon: "clock",
                     title: windowTitle(for: usageManager.usageData.primaryWindowMinutes),
@@ -44,13 +57,25 @@ struct CodexUsagePopup: View {
             Text("Codex Usage")
                 .font(.system(size: 14, weight: .semibold))
             Spacer()
-            Text(usageManager.usageData.plan)
-                .font(.system(size: 11, weight: .medium))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(planBadgeColor.opacity(0.3))
-                .foregroundColor(planBadgeColor)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+            if usageManager.usageData.isAvailable && !showSettings {
+                Text(usageManager.usageData.plan)
+                    .font(.system(size: 11, weight: .medium))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(planBadgeColor.opacity(0.3))
+                    .foregroundColor(planBadgeColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showSettings.toggle()
+                }
+            } label: {
+                Image(systemName: showSettings ? "chart.bar.fill" : "slider.horizontal.3")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.7))
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
@@ -115,9 +140,7 @@ struct CodexUsagePopup: View {
     }
 
     private func progressColor(for percentage: Double) -> Color {
-        if percentage >= 0.8 { return .red }
-        if percentage >= 0.6 { return .orange }
-        return .white
+        thresholdConfiguration.color(for: percentage)
     }
 
     private func resetTimeString(_ date: Date) -> String {
@@ -210,9 +233,6 @@ struct CodexUsagePopup: View {
                 .scaledToFit()
                 .frame(width: 28, height: 28)
 
-            Text("Codex Usage")
-                .font(.system(size: 14, weight: .semibold))
-
             Text("Sign in to Codex to view your rate-limit usage directly in the menu bar.")
                 .font(.system(size: 11))
                 .opacity(0.5)
@@ -256,9 +276,6 @@ struct CodexUsagePopup: View {
                 .font(.system(size: 24))
                 .opacity(0.5)
 
-            Text("No usage data yet")
-                .font(.system(size: 12, weight: .medium))
-
             Text("Run a Codex task first. The widget reads the latest non-empty rate-limit snapshot from your local Codex sessions.")
                 .font(.system(size: 11))
                 .opacity(0.5)
@@ -301,9 +318,6 @@ struct CodexUsagePopup: View {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 24))
                 .opacity(0.5)
-
-            Text("Unable to load usage data")
-                .font(.system(size: 12, weight: .medium))
 
             Text("Reading local Codex auth or session files failed.")
                 .font(.system(size: 11))

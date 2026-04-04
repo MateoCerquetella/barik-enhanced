@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.5
+
+### Improvements
+- **Codex / Claude usage widgets**: Added an in-popup settings view to adjust warning and critical thresholds without editing the TOML file manually. The widgets and popup progress bars now react to your saved thresholds immediately.
+- **About menu**: Fixed the main GitHub link so it points to the `barik-enhanced` repository.
+
+### Bug Fixes
+- **Status area recovery**: Improved native macOS status area measurement refresh after wake, screen wake, and session reactivation so the bar recovers more reliably from sleep and display changes.
+
 ## 1.2.4
 
 ### Bug Fixes
