@@ -38,6 +38,7 @@ struct TimeWidget: View {
         .lineLimit(1)
         .foregroundStyle(.foregroundOutside)
         .shadow(color: .foregroundShadowOutside, radius: 3)
+        .fixedSize(horizontal: true, vertical: false)
         .onReceive(timer) { date in
             currentTime = date
         }
@@ -56,6 +57,7 @@ struct TimeWidget: View {
         .experimentalConfiguration(cornerRadius: 15)
         .frame(maxHeight: .infinity)
         .background(.black.opacity(0.001))
+        .contentShape(Rectangle())
         .monospacedDigit()
         .onTapGesture {
             MenuBarPopup.show(rect: rect, id: "calendar") {

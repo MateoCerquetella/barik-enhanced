@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.2.6
+
+### Improvements
+- **Codex / Claude usage widgets**: Standardized both widgets to refresh every 60 seconds and added manual reload support.
+- **App updates**: Changed automatic release checks to run every 4 hours, with immediate checks after wake and session activation.
+
+### Bug Fixes
+- **Claude usage access**: Prevented background refreshes from repeatedly prompting for Keychain or sudo-style password access. Only the explicit Allow Access action can show the system prompt.
+- **Wake recovery**: Reconnects Codex and Claude usage checks after lid close/open, screen wake, and session reactivation with immediate and delayed refresh attempts.
+- **Popup clicks**: Rebuilds popup panels after display and wake changes, fixes multi-screen popup positioning, and restores panel ordering so widget clicks keep working.
+- **Time widget visibility**: Keeps the configured time widget in a protected trailing slot so it remains fully visible before the native macOS status area.
+
 ## 1.2.5
 
 ### Improvements

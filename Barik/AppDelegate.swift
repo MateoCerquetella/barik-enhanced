@@ -58,12 +58,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func screenParametersDidChange(_ notification: Notification) {
+        MenuBarPopup.setup()
         setupPanels()
     }
 
     @objc private func systemDidWake(_ notification: Notification) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
             MenuBarMetrics.shared.restartDetection()
+            MenuBarPopup.setup()
             self?.setupPanels()
         }
     }
@@ -71,6 +73,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func sessionDidBecomeActive(_ notification: Notification) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             MenuBarMetrics.shared.restartDetection()
+            MenuBarPopup.setup()
             self?.setupPanels()
         }
     }
@@ -78,6 +81,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func screensDidWake(_ notification: Notification) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             MenuBarMetrics.shared.restartDetection()
+            MenuBarPopup.setup()
             self?.setupPanels()
         }
     }
@@ -115,8 +119,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 // corrupted state after system crashes or sleep/wake cycles
                 backgroundPanels[index].setFrame(screenFrame, display: true)
                 backgroundPanels[index].level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)))
+                backgroundPanels[index].orderFront(nil)
                 menuBarPanels[index].setFrame(screenFrame, display: true)
                 menuBarPanels[index].level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.backstopMenu)))
+                menuBarPanels[index].orderFront(nil)
             } else {
                 // Create new panels
                 let backgroundPanel = createPanel(
@@ -147,7 +153,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         newPanel.level = NSWindow.Level(rawValue: level)
         newPanel.backgroundColor = .clear
         newPanel.hasShadow = false
-        newPanel.collectionBehavior = [.canJoinAllSpaces]
+        newPanel.isReleasedWhenClosed = false
+        newPanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         newPanel.contentView = NSHostingView(rootView: hostingRootView)
         newPanel.orderFront(nil)
         return newPanel

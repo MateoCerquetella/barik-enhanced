@@ -111,9 +111,10 @@ final class CodexUsageManager: ObservableObject {
     @Published private(set) var fetchFailed: Bool = false
 
     private var refreshTimer: Timer?
+    private var recoveryTask: Task<Void, Never>?
     private var currentConfig: ConfigData = [:]
 
-    private static let refreshInterval: TimeInterval = 30
+    private static let refreshInterval: TimeInterval = 60
 
     private init() {
         NSWorkspace.shared.notificationCenter.addObserver(
@@ -123,6 +124,33 @@ final class CodexUsageManager: ObservableObject {
         ) { [weak self] _ in
             Task { @MainActor in
                 self?.handleWake()
+            }
+        }
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.sessionDidBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.handleWake()
+            }
+        }
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.screensDidWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.handleWake()
+            }
+        }
+        NotificationCenter.default.addObserver(
+            forName: Notification.Name("ManualReloadTriggered"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.refresh()
             }
         }
     }
@@ -139,6 +167,8 @@ final class CodexUsageManager: ObservableObject {
     func stopUpdating() {
         refreshTimer?.invalidate()
         refreshTimer = nil
+        recoveryTask?.cancel()
+        recoveryTask = nil
     }
 
     func refresh() {
@@ -148,9 +178,15 @@ final class CodexUsageManager: ObservableObject {
 
     private func handleWake() {
         refreshTimer?.invalidate()
-        Task {
+        recoveryTask?.cancel()
+        recoveryTask = Task { @MainActor [weak self] in
+            self?.connectAndFetch()
             try? await Task.sleep(for: .seconds(2))
-            connectAndFetch()
+            guard !Task.isCancelled else { return }
+            self?.connectAndFetch()
+            try? await Task.sleep(for: .seconds(8))
+            guard !Task.isCancelled else { return }
+            self?.connectAndFetch()
         }
     }
 
@@ -191,11 +227,14 @@ final class CodexUsageManager: ObservableObject {
 
     private func scheduleRefreshTimer() {
         refreshTimer?.invalidate()
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: Self.refreshInterval, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: Self.refreshInterval, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.connectAndFetch()
             }
         }
+        timer.tolerance = 2
+        RunLoop.main.add(timer, forMode: .common)
+        refreshTimer = timer
     }
 
     nonisolated private static func loadUsage(planOverride: String?) -> CodexUsageLoadState {

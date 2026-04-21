@@ -8,6 +8,8 @@ struct MenuBarView: View {
     @State private var settingsRect: CGRect = .zero
 
     var body: some View {
+        let regularItems = displayedItems.filter { $0.id != "default.time" }
+        let timeItems = displayedItems.filter { $0.id == "default.time" }
         let theme: ColorScheme? =
             switch configManager.config.rootToml.theme {
             case "dark":
@@ -20,25 +22,12 @@ struct MenuBarView: View {
 
         HStack(spacing: 0) {
             HStack(spacing: configManager.config.experimental.foreground.spacing) {
-                ForEach(displayedItems) { item in
-                    buildView(for: item)
-                        .lineLimit(1)
-                        .onDrag {
-                            draggedItem = item
-                            return NSItemProvider(object: item.id as NSString)
-                        }
-                        .onDrop(of: [.text], delegate: WidgetDropDelegate(
-                            item: item,
-                            items: displayedItems,
-                            draggedItem: $draggedItem,
-                            onReorder: { newItems in
-                                displayedItems = newItems
-                                saveWidgetOrder(newItems)
-                            }
-                        ))
-                        .opacity(draggedItem?.instanceID == item.instanceID ? 0.5 : 1.0)
+                ForEach(regularItems) { item in
+                    draggableWidget(for: item)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .clipped()
             .contextMenu {
                 Button("Configure Widgets...") {
                     WidgetConfiguratorWindow.show()
@@ -50,6 +39,17 @@ struct MenuBarView: View {
                 Button("Quit Barik Enhanced") {
                     NSApp.terminate(nil)
                 }
+            }
+
+            if !timeItems.isEmpty {
+                HStack(spacing: configManager.config.experimental.foreground.spacing) {
+                    ForEach(timeItems) { item in
+                        draggableWidget(for: item)
+                            .fixedSize(horizontal: true, vertical: false)
+                            .layoutPriority(1_000)
+                    }
+                }
+                .layoutPriority(1_000)
             }
 
             // Settings gear button
@@ -65,6 +65,7 @@ struct MenuBarView: View {
                     }
                 )
                 .background(.black.opacity(0.001))
+                .contentShape(Rectangle())
                 .onTapGesture {
                     MenuBarPopup.show(rect: settingsRect, id: "settings") {
                         SettingsMenuView()
@@ -90,6 +91,27 @@ struct MenuBarView: View {
         .onReceive(configManager.$config) { newConfig in
             displayedItems = newConfig.rootToml.widgets.displayed
         }
+    }
+
+    @ViewBuilder
+    private func draggableWidget(for item: TomlWidgetItem) -> some View {
+        buildView(for: item)
+            .lineLimit(1)
+            .contentShape(Rectangle())
+            .onDrag {
+                draggedItem = item
+                return NSItemProvider(object: item.id as NSString)
+            }
+            .onDrop(of: [.text], delegate: WidgetDropDelegate(
+                item: item,
+                items: displayedItems,
+                draggedItem: $draggedItem,
+                onReorder: { newItems in
+                    displayedItems = newItems
+                    saveWidgetOrder(newItems)
+                }
+            ))
+            .opacity(draggedItem?.instanceID == item.instanceID ? 0.5 : 1.0)
     }
 
     @ViewBuilder

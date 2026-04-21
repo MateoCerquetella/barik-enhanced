@@ -51,6 +51,9 @@ class MenuBarPopup {
         guard screenIndex < panels.count else { return }
 
         let panel = panels[screenIndex]
+        let screenFrame = screenFrame(for: screenIndex)
+        let localMidX = rect.midX - screenFrame.minX
+        let localMidY = rect.midY - screenFrame.minY
         currentScreenIndex = screenIndex
 
         if panel.isKeyWindow, lastContentIdentifier == id {
@@ -89,7 +92,7 @@ class MenuBarPopup {
                             MenuBarPopupView {
                                 content()
                             }
-                            .position(x: rect.midX, y: rect.midY)
+                            .position(x: localMidX, y: localMidY)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 )
@@ -106,7 +109,7 @@ class MenuBarPopup {
                         MenuBarPopupView {
                             content()
                         }
-                        .position(x: rect.midX, y: rect.midY)
+                        .position(x: localMidX, y: localMidY)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             )
@@ -140,16 +143,14 @@ class MenuBarPopup {
 
         // Create panels for each screen
         for (index, screen) in screens.enumerated() {
-            let panelFrame = NSRect(
-                x: 0,
-                y: 0,
-                width: screen.visibleFrame.width,
-                height: screen.visibleFrame.height
-            )
+            let panelFrame = screen.frame
 
             if index < panels.count {
                 // Update existing panel
                 panels[index].setFrame(panelFrame, display: true)
+                panels[index].level = NSWindow.Level(
+                    rawValue: Int(CGWindowLevelForKey(.floatingWindow)))
+                panels[index].orderOut(nil)
             } else {
                 // Create new panel
                 let newPanel = HidingPanel(
@@ -163,11 +164,15 @@ class MenuBarPopup {
                     rawValue: Int(CGWindowLevelForKey(.floatingWindow)))
                 newPanel.backgroundColor = .clear
                 newPanel.hasShadow = false
-                newPanel.collectionBehavior = [.canJoinAllSpaces]
+                newPanel.isReleasedWhenClosed = false
+                newPanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
 
                 panels.append(newPanel)
             }
         }
+
+        lastContentIdentifier = nil
+        currentScreenIndex = nil
     }
 
     private static func getScreenIndex(for rect: CGRect) -> Int {
@@ -193,6 +198,20 @@ class MenuBarPopup {
 
             // Default to main screen (index 0) if not found
             return 0
+        }
+    }
+
+    private static func screenFrame(for index: Int) -> CGRect {
+        let monitorMode = ConfigManager.shared.config.monitors.mode
+
+        switch monitorMode {
+        case .main:
+            return NSScreen.main?.frame ?? .zero
+        case .all:
+            guard index < NSScreen.screens.count else {
+                return NSScreen.main?.frame ?? .zero
+            }
+            return NSScreen.screens[index].frame
         }
     }
 }

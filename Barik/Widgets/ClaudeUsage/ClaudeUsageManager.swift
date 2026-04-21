@@ -1,4 +1,5 @@
 import Foundation
+import LocalAuthentication
 import Security
 import SwiftUI
 
@@ -50,11 +51,12 @@ final class ClaudeUsageManager: ObservableObject {
     @Published private(set) var errorMessage: String?
 
     private var refreshTimer: Timer?
+    private var recoveryTask: Task<Void, Never>?
     private var cachedCredentials: (accessToken: String, plan: String)?
     private var currentConfig: ConfigData = [:]
 
     private static let connectedKey = "claude-usage-connected"
-    private static let refreshInterval: TimeInterval = 120
+    private static let refreshInterval: TimeInterval = 60
 
     private init() {
         NSWorkspace.shared.notificationCenter.addObserver(
@@ -66,63 +68,117 @@ final class ClaudeUsageManager: ObservableObject {
                 self?.handleWake()
             }
         }
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.sessionDidBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.handleWake()
+            }
+        }
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.screensDidWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.handleWake()
+            }
+        }
+        NotificationCenter.default.addObserver(
+            forName: Notification.Name("ManualReloadTriggered"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.refresh()
+            }
+        }
     }
 
     func startUpdating(config: ConfigData) {
         currentConfig = config
-        reconnectIfNeeded()
+        connectAndFetch(allowUserPrompt: false)
     }
 
     func reconnectIfNeeded() {
-        if !isConnected && UserDefaults.standard.bool(forKey: Self.connectedKey) {
-            connectAndFetch()
+        if cachedCredentials != nil {
+            isConnected = true
+            fetchData()
+            scheduleRefreshTimer()
+        } else if !isConnected && UserDefaults.standard.bool(forKey: Self.connectedKey) {
+            connectAndFetch(allowUserPrompt: false)
         }
     }
 
     func stopUpdating() {
         refreshTimer?.invalidate()
         refreshTimer = nil
+        recoveryTask?.cancel()
+        recoveryTask = nil
     }
 
     func refresh() {
         fetchFailed = false
         errorMessage = nil
-        connectAndFetch()
+        connectAndFetch(allowUserPrompt: false)
     }
 
     func requestAccess() {
-        connectAndFetch()
+        connectAndFetch(allowUserPrompt: true)
     }
 
     private func handleWake() {
-        guard isConnected else { return }
         refreshTimer?.invalidate()
-        Task {
+        recoveryTask?.cancel()
+        recoveryTask = Task { @MainActor [weak self] in
+            self?.connectAndFetch(allowUserPrompt: false)
             try? await Task.sleep(for: .seconds(2))
-            connectAndFetch()
+            guard !Task.isCancelled else { return }
+            self?.connectAndFetch(allowUserPrompt: false)
+            try? await Task.sleep(for: .seconds(8))
+            guard !Task.isCancelled else { return }
+            self?.connectAndFetch(allowUserPrompt: false)
         }
     }
 
-    private func connectAndFetch() {
-        guard let creds = readKeychainCredentials() else {
-            isConnected = false
-            cachedCredentials = nil
-            errorMessage = nil
-            UserDefaults.standard.set(false, forKey: Self.connectedKey)
+    private func connectAndFetch(allowUserPrompt: Bool) {
+        let credentials = readKeychainCredentials(allowUserPrompt: allowUserPrompt)
+
+        if let credentials {
+            cachedCredentials = credentials
+            isConnected = true
+            UserDefaults.standard.set(true, forKey: Self.connectedKey)
+            fetchData()
+            scheduleRefreshTimer()
             return
         }
 
-        cachedCredentials = creds
-        isConnected = true
-        UserDefaults.standard.set(true, forKey: Self.connectedKey)
-        fetchData()
+        if cachedCredentials != nil {
+            isConnected = true
+            fetchData()
+            scheduleRefreshTimer()
+            return
+        }
 
+        isConnected = false
+        errorMessage = nil
+        UserDefaults.standard.set(false, forKey: Self.connectedKey)
         refreshTimer?.invalidate()
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: Self.refreshInterval, repeats: true) { [weak self] _ in
+        refreshTimer = nil
+    }
+
+    private func scheduleRefreshTimer() {
+        refreshTimer?.invalidate()
+        let timer = Timer(timeInterval: Self.refreshInterval, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                self?.fetchData()
+                self?.connectAndFetch(allowUserPrompt: false)
             }
         }
+        timer.tolerance = 5
+        RunLoop.main.add(timer, forMode: .common)
+        refreshTimer = timer
     }
 
     // MARK: - Data Fetching
@@ -225,12 +281,18 @@ final class ClaudeUsageManager: ObservableObject {
 
     // MARK: - Keychain
 
-    private func readKeychainCredentials() -> (accessToken: String, plan: String)? {
-        let query: [String: Any] = [
+    private func readKeychainCredentials(allowUserPrompt: Bool) -> (accessToken: String, plan: String)? {
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: "Claude Code-credentials",
             kSecReturnData as String: true,
         ]
+        if !allowUserPrompt {
+            let context = LAContext()
+            context.interactionNotAllowed = true
+            query[kSecUseAuthenticationContext as String] = context
+        }
+
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         guard status == errSecSuccess,

@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 final class AppUpdater: ObservableObject {
@@ -12,19 +13,45 @@ final class AppUpdater: ObservableObject {
 
     // Timer to schedule periodic update checks
     private var updateTimer: Timer?
+    private var notificationObservers: [NSObjectProtocol] = []
+    private static let updateInterval: TimeInterval = 14_400
 
     init() {
         fetchLatestRelease()
-        // Check for updates every 30 minutes
-        updateTimer = Timer.scheduledTimer(
-            withTimeInterval: 1800, repeats: true
+        scheduleUpdateTimer()
+
+        let wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
         ) { [weak self] _ in
             self?.fetchLatestRelease()
         }
+        let activeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.sessionDidBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.fetchLatestRelease()
+        }
+        notificationObservers = [wakeObserver, activeObserver]
     }
 
     deinit {
         updateTimer?.invalidate()
+        for observer in notificationObservers {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+        }
+    }
+
+    private func scheduleUpdateTimer() {
+        updateTimer?.invalidate()
+        let timer = Timer(timeInterval: Self.updateInterval, repeats: true) { [weak self] _ in
+            self?.fetchLatestRelease()
+        }
+        timer.tolerance = 60
+        RunLoop.main.add(timer, forMode: .common)
+        updateTimer = timer
     }
 
     /// Returns a fallback download URL based on the version string.
