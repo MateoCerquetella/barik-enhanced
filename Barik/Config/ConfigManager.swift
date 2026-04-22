@@ -82,7 +82,6 @@ final class ConfigManager: ObservableObject {
                 "default.spaces",
                 "spacer",
                 "default.network",
-                "default.localip",
                 "default.battery",
                 "default.cpuram",
                 "default.networkactivity",
@@ -120,10 +119,6 @@ final class ConfigManager: ObservableObject {
 
             [widgets.default.networkactivity]
             # No specific configuration options yet
-
-            [widgets.default.localip]
-            show-icon = true
-            show-interface = false
 
             [widgets.default.performance]
             # Performance mode widget - replaces volume widget

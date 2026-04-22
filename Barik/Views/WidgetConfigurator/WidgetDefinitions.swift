@@ -17,7 +17,6 @@ let allWidgets: [WidgetDefinition] = [
     WidgetDefinition(id: "default.weather", name: "Weather", icon: "cloud.sun.fill", description: "Temperature & forecast"),
     WidgetDefinition(id: "default.brightness", name: "Brightness", icon: "sun.max.fill", description: "Screen brightness"),
     WidgetDefinition(id: "default.network", name: "Network", icon: "wifi", description: "WiFi/Ethernet status"),
-    WidgetDefinition(id: "default.localip", name: "Local IP", icon: "network", description: "LAN IP address with copy action"),
     WidgetDefinition(id: "default.battery", name: "Battery", icon: "battery.75percent", description: "Battery level"),
     WidgetDefinition(id: "default.time", name: "Time", icon: "clock.fill", description: "Date and time"),
     WidgetDefinition(id: "default.dnd", name: "Do Not Disturb", icon: "moon.fill", description: "Focus mode toggle"),

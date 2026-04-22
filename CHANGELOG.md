@@ -1,12 +1,11 @@
 # Changelog
 
-## 1.2.8
+## 1.2.9
 
-### Improvements
-- Added a new **Local IP** widget that shows the current LAN IPv4 address and copies it to the clipboard when clicked.
-- Registered the Local IP widget in the drag-and-drop configurator and default TOML template.
+### Bug Fixes
+- Restored the application codebase to the stable `1.2.6` implementation while releasing it as `1.2.9`.
 
-## 1.2.7
+## 1.2.6
 
 ### Improvements
 - **Codex / Claude usage widgets**: Standardized both widgets to refresh every 60 seconds and added manual reload support.
