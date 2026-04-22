@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.2.6
+## 1.2.7
 
 ### Improvements
 - **Codex / Claude usage widgets**: Standardized both widgets to refresh every 60 seconds and added manual reload support.
