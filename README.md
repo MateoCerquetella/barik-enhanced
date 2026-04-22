@@ -1,6 +1,6 @@
 # Barik Enhanced
 
-[![Version](https://img.shields.io/badge/version-1.2.7-blue.svg)](https://github.com/MateoCerquetella/barik-enhanced/releases/tag/v1.2.7)
+[![Version](https://img.shields.io/badge/version-1.2.8-blue.svg)](https://github.com/MateoCerquetella/barik-enhanced/releases/tag/v1.2.8)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![macOS](https://img.shields.io/badge/macOS-14.0%2B-black.svg)](https://github.com/MateoCerquetella/barik-enhanced)
 
@@ -15,7 +15,7 @@ Right-click the menu bar or click the gear icon to open the visual configurator.
 
 ![Widget Configurator](resources/screenshots/configurator.png)
 
-### 20+ Widgets
+### 21+ Widgets
 
 | Widget | Description |
 |--------|-------------|
@@ -29,6 +29,7 @@ Right-click the menu bar or click the gear icon to open the visual configurator.
 | **Brightness** | Screen brightness control |
 | **Battery** | Battery level with charging status |
 | **Network** | WiFi/Ethernet connection status |
+| **Local IP** | LAN IP address with click-to-copy |
 | **Time** | Date, time, and calendar popup |
 | **Claude Usage** | Claude API rate limit tracking with configurable alert thresholds |
 | **Codex Usage** | OpenAI Codex usage monitoring with configurable alert thresholds |
@@ -96,6 +97,7 @@ displayed = [
     "default.volume",
     "default.microphone",
     "default.network",
+    "default.localip",
     "default.battery",
     "default.time"
 ]
@@ -122,6 +124,10 @@ cpu-critical-level = 90
 ram-warning-level = 70
 ram-critical-level = 90
 
+[widgets.default.localip]
+show-icon = true
+show-interface = false
+
 [widgets.default.claude-usage]
 warning-threshold = 60
 critical-threshold = 80
@@ -142,11 +148,11 @@ pomodoros-before-long-break = 4
 default.spaces          default.nowplaying      default.weather
 default.cpuram          default.networkactivity  default.volume
 default.microphone      default.brightness      default.network
-default.battery         default.time            default.dnd
-default.disk            default.uptime          default.pomodoro
-default.performance     default.keyboardlayout  default.claude-usage
-default.codex-usage     default.countdown       spacer
-divider
+default.localip         default.battery         default.time
+default.dnd             default.disk            default.uptime
+default.pomodoro        default.performance     default.keyboardlayout
+default.claude-usage    default.codex-usage     default.countdown
+spacer                  divider
 ```
 
 ## Performance

@@ -126,6 +126,10 @@ struct MenuBarView: View {
         case "default.network":
             NetworkWidget().environmentObject(config)
 
+        case "default.localip":
+            LocalIPAddressWidget()
+                .environmentObject(config)
+
         case "default.battery":
             BatteryWidget().environmentObject(config)
 

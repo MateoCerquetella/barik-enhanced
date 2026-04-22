@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.8
+
+### Improvements
+- Added a new **Local IP** widget that shows the current LAN IPv4 address and copies it to the clipboard when clicked.
+- Registered the Local IP widget in the drag-and-drop configurator and default TOML template.
+
 ## 1.2.7
 
 ### Improvements
