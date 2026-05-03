@@ -197,6 +197,10 @@ struct MenuBarView: View {
             CodexUsageWidget()
                 .environmentObject(config)
 
+        case "default.opencode-usage":
+            OpenCodeUsageWidget()
+                .environmentObject(config)
+
         case "default.countdown":
             CountdownWidget()
                 .environmentObject(config)

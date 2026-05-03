@@ -28,6 +28,7 @@ let allWidgets: [WidgetDefinition] = [
     WidgetDefinition(id: "default.keyboardlayout", name: "Keyboard", icon: "keyboard", description: "Input source"),
     WidgetDefinition(id: "default.claude-usage", name: "Claude Usage", icon: "sparkle", description: "Claude API rate limit tracking"),
     WidgetDefinition(id: "default.codex-usage", name: "Codex Usage", icon: "terminal", description: "OpenAI Codex usage tracking"),
+    WidgetDefinition(id: "default.opencode-usage", name: "OpenCode", icon: "terminal", description: "OpenCode Go usage tracking (local DB)"),
     WidgetDefinition(id: "default.countdown", name: "Countdown", icon: "calendar.badge.clock", description: "Days until target date"),
     WidgetDefinition(id: "spacer", name: "Spacer", icon: "arrow.left.and.right", description: "Flexible space"),
     WidgetDefinition(id: "divider", name: "Divider", icon: "line.diagonal", description: "Visual separator"),

@@ -22,6 +22,7 @@ final class MenuBarContextMenu: NSMenu, NSMenuDelegate {
         ("default.keyboardlayout", "Keyboard"),
         ("default.claude-usage", "Claude Usage"),
         ("default.codex-usage", "Codex Usage"),
+        ("default.opencode-usage", "OpenCode"),
         ("default.countdown", "Countdown"),
     ]
 

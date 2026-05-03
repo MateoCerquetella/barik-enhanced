@@ -18,6 +18,10 @@ struct CodexUsageWidget: View {
         max(0, min(1, 1 - percentage))
     }
 
+    private var secondaryRemaining: Double {
+        max(0, min(1, 1 - usageManager.usageData.secondaryPercentage))
+    }
+
     private var ringColor: Color {
         thresholdConfiguration.color(for: percentage)
     }
@@ -72,16 +76,17 @@ struct CodexUsageWidget: View {
                 .opacity(0.28)
                 .frame(width: iconSize, height: iconSize)
 
-            Image("CodexIcon")
-                .resizable()
-                .scaledToFit()
-                .frame(width: iconSize, height: iconSize)
+            Rectangle()
+                .fill(.white)
+                .frame(width: iconSize, height: iconSize * secondaryRemaining)
+                .frame(width: iconSize, height: iconSize, alignment: .bottom)
+                .animation(.easeOut(duration: 0.8), value: secondaryRemaining)
                 .mask(
-                    Rectangle()
-                        .frame(width: iconSize, height: iconSize * remainingPercentage)
-                        .frame(width: iconSize, height: iconSize, alignment: .bottom)
+                    Image("CodexIcon")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: iconSize, height: iconSize)
                 )
-                .animation(.easeOut(duration: 0.8), value: remainingPercentage)
         }
     }
 }

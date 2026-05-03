@@ -1,8 +1,8 @@
 import SwiftUI
 
-struct CodexUsagePopup: View {
+struct OpenCodeUsagePopup: View {
     @EnvironmentObject var configProvider: ConfigProvider
-    @ObservedObject private var usageManager = CodexUsageManager.shared
+    @ObservedObject private var usageManager = OpenCodeUsageManager.shared
     @State private var showSettings = false
 
     private var thresholdConfiguration: UsageThresholdConfiguration {
@@ -16,9 +16,9 @@ struct CodexUsagePopup: View {
 
             if showSettings {
                 UsageThresholdSettingsView(
-                    title: "Codex",
-                    widgetConfigKey: "default.codex-usage",
-                    accentColor: .blue,
+                    title: "OpenCode",
+                    widgetConfigKey: "default.opencode-usage",
+                    accentColor: openCodeGreen,
                     initialConfiguration: thresholdConfiguration
                 )
             } else if !usageManager.isConnected {
@@ -26,25 +26,32 @@ struct CodexUsagePopup: View {
             } else if usageManager.usageData.isAvailable {
                 rateLimitSection(
                     icon: "clock",
-                    title: windowTitle(for: usageManager.usageData.primaryWindowMinutes),
-                    percentage: usageManager.usageData.primaryPercentage,
-                    resetDate: usageManager.usageData.primaryResetDate,
-                    resetPrefix: "Resets in"
+                    title: "Rolling Usage",
+                    percentage: usageManager.usageData.rollingPercentage,
+                    resetDate: usageManager.usageData.rollingResetDate,
+                    resetPrefix: "Resets in",
+                    subtitle: formatCost(usageManager.usageData.rollingCost, limit: usageManager.usageData.rollingLimit)
                 )
-                if usageManager.usageData.secondaryWindowMinutes > 0 {
-                    Divider().background(Color.white.opacity(0.2))
-                    rateLimitSection(
-                        icon: "calendar",
-                        title: windowTitle(for: usageManager.usageData.secondaryWindowMinutes),
-                        percentage: usageManager.usageData.secondaryPercentage,
-                        resetDate: usageManager.usageData.secondaryResetDate,
-                        resetPrefix: "Resets"
-                    )
-                }
+                Divider().background(Color.white.opacity(0.2))
+                rateLimitSection(
+                    icon: "calendar",
+                    title: "Weekly Usage",
+                    percentage: usageManager.usageData.weeklyPercentage,
+                    resetDate: usageManager.usageData.weeklyResetDate,
+                    resetPrefix: "Resets in",
+                    subtitle: formatCost(usageManager.usageData.weeklyCost, limit: usageManager.usageData.weeklyLimit)
+                )
+                Divider().background(Color.white.opacity(0.2))
+                rateLimitSection(
+                    icon: "chart.bar",
+                    title: "Monthly Usage",
+                    percentage: usageManager.usageData.monthlyPercentage,
+                    resetDate: usageManager.usageData.monthlyResetDate,
+                    resetPrefix: "Resets in",
+                    subtitle: formatCost(usageManager.usageData.monthlyCost, limit: usageManager.usageData.monthlyLimit)
+                )
                 Divider().background(Color.white.opacity(0.2))
                 footerSection
-            } else if usageManager.fetchFailed {
-                errorView
             } else {
                 emptyView
             }
@@ -60,11 +67,11 @@ struct CodexUsagePopup: View {
 
     private var titleBar: some View {
         HStack(spacing: 8) {
-            Image("CodexIcon")
-                .resizable()
-                .scaledToFit()
+            Image(systemName: "terminal")
+                .font(.system(size: 14))
+                .foregroundStyle(openCodeGreen)
                 .frame(width: 18, height: 18)
-            Text("Codex Usage")
+            Text("OpenCode Usage")
                 .font(.system(size: 14, weight: .semibold))
             Spacer()
             if usageManager.usageData.isAvailable && !showSettings {
@@ -72,8 +79,8 @@ struct CodexUsagePopup: View {
                     .font(.system(size: 11, weight: .medium))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .background(planBadgeColor.opacity(0.3))
-                    .foregroundColor(planBadgeColor)
+                    .background(openCodeGreen.opacity(0.3))
+                    .foregroundColor(openCodeGreen)
                     .clipShape(RoundedRectangle(cornerRadius: 6))
             }
             Button {
@@ -91,17 +98,6 @@ struct CodexUsagePopup: View {
         .padding(.vertical, 14)
     }
 
-    private var planBadgeColor: Color {
-        switch usageManager.usageData.plan.lowercased() {
-        case "pro": return .orange
-        case "plus": return .green
-        case "team": return .blue
-        case "business", "enterprise": return .purple
-        case "free": return .gray
-        default: return .blue
-        }
-    }
-
     // MARK: - Rate Limit Section
 
     private func rateLimitSection(
@@ -109,7 +105,8 @@ struct CodexUsagePopup: View {
         title: String,
         percentage: Double,
         resetDate: Date?,
-        resetPrefix: String
+        resetPrefix: String,
+        subtitle: String? = nil
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -121,6 +118,12 @@ struct CodexUsagePopup: View {
                 Spacer()
                 Text("\(Int(min(percentage, 1.0) * 100))%")
                     .font(.system(size: 24, weight: .semibold))
+            }
+
+            if let subtitle {
+                Text(subtitle)
+                    .font(.system(size: 11))
+                    .opacity(0.45)
             }
 
             GeometryReader { geometry in
@@ -139,7 +142,7 @@ struct CodexUsagePopup: View {
             }
             .frame(height: 6)
 
-            if let resetDate = resetDate {
+            if let resetDate {
                 Text("\(resetPrefix) \(resetTimeString(resetDate))")
                     .font(.system(size: 11))
                     .opacity(0.5)
@@ -171,39 +174,35 @@ struct CodexUsagePopup: View {
         }
     }
 
-    private func windowTitle(for minutes: Int) -> String {
-        guard minutes > 0 else { return "Usage Window" }
-
-        if minutes % 1_440 == 0 {
-            let days = minutes / 1_440
-            return "\(days)-Day Window"
-        }
-
-        if minutes % 60 == 0 {
-            let hours = minutes / 60
-            return "\(hours)-Hour Window"
-        }
-
-        return "\(minutes)-Minute Window"
-    }
-
     // MARK: - Footer
 
     private var footerSection: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text("Usage updated \(timeAgoString(usageManager.usageData.lastUpdated))")
-                .font(.system(size: 11))
-                .opacity(0.4)
-
-            if let activityDate = usageManager.usageData.lastActivityDate,
-               activityDate.timeIntervalSince(usageManager.usageData.lastUpdated) > 60 {
-                Text("Codex active \(timeAgoString(activityDate))")
-                    .font(.system(size: 10))
-                    .opacity(0.3)
-            }
-
+        VStack(alignment: .leading, spacing: 6) {
             HStack {
+                Text("Updated \(timeAgoString(usageManager.usageData.lastUpdated)) · local DB")
+                    .font(.system(size: 11))
+                    .opacity(0.4)
+
                 Spacer()
+
+                Button(action: {
+                    if let url = URL(string: "https://opencode.ai/auth") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }) {
+                    Image(systemName: "arrow.up.right.square")
+                        .font(.system(size: 12))
+                        .opacity(0.6)
+                }
+                .buttonStyle(.plain)
+                .help("Open opencode.ai dashboard for authoritative usage")
+                .onHover { hovering in
+                    if hovering {
+                        NSCursor.pointingHand.push()
+                    } else {
+                        NSCursor.pop()
+                    }
+                }
 
                 Button(action: {
                     usageManager.refresh()
@@ -226,24 +225,15 @@ struct CodexUsagePopup: View {
         .padding(.vertical, 10)
     }
 
-    private func timeAgoString(_ date: Date) -> String {
-        let seconds = Int(Date().timeIntervalSince(date))
-        if seconds < 60 { return "\(seconds) sec ago" }
-        let minutes = seconds / 60
-        if minutes < 60 { return "\(minutes) min ago" }
-        return "\(minutes / 60)h ago"
-    }
-
-    // MARK: - Connect
+    // MARK: - Connect / Not Installed
 
     private var connectView: some View {
         VStack(spacing: 14) {
-            Image("CodexIcon")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 28, height: 28)
+            Image(systemName: "terminal")
+                .font(.system(size: 28))
+                .opacity(0.4)
 
-            Text("Sign in to Codex to view your rate-limit usage directly in the menu bar.")
+            Text("Sign in to OpenCode Go to view your rate-limit usage directly in the menu bar.")
                 .font(.system(size: 11))
                 .opacity(0.5)
                 .multilineTextAlignment(.center)
@@ -258,7 +248,7 @@ struct CodexUsagePopup: View {
                     .padding(.vertical, 6)
             }
             .buttonStyle(.borderedProminent)
-            .tint(.blue)
+            .tint(openCodeGreen)
             .onHover { hovering in
                 if hovering {
                     NSCursor.pointingHand.push()
@@ -267,7 +257,7 @@ struct CodexUsagePopup: View {
                 }
             }
 
-            Text("Reads `~/.codex/auth.json` and the latest Codex session rate-limit snapshot.")
+            Text("Reads `~/.local/share/opencode/auth.json` and the message database.")
                 .font(.system(size: 10))
                 .opacity(0.3)
                 .multilineTextAlignment(.center)
@@ -278,25 +268,17 @@ struct CodexUsagePopup: View {
         .padding(.vertical, 30)
     }
 
-    // MARK: - Empty
-
     private var emptyView: some View {
         VStack(spacing: 14) {
             Image(systemName: "chart.pie")
                 .font(.system(size: 24))
                 .opacity(0.5)
 
-            Text("Run a Codex task first. The widget reads the latest non-empty rate-limit snapshot from your local Codex sessions.")
+            Text("Use OpenCode Go first. The widget tracks costs from your local message database.")
                 .font(.system(size: 11))
                 .opacity(0.5)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-
-            if let activityDate = usageManager.usageData.lastActivityDate {
-                Text("Latest Codex activity \(timeAgoString(activityDate))")
-                    .font(.system(size: 10))
-                    .opacity(0.35)
-            }
 
             Button(action: {
                 usageManager.refresh()
@@ -307,7 +289,7 @@ struct CodexUsagePopup: View {
                     .padding(.vertical, 6)
             }
             .buttonStyle(.borderedProminent)
-            .tint(.blue)
+            .tint(openCodeGreen)
             .onHover { hovering in
                 if hovering {
                     NSCursor.pointingHand.push()
@@ -321,40 +303,19 @@ struct CodexUsagePopup: View {
         .padding(.vertical, 30)
     }
 
-    // MARK: - Error
+    private func timeAgoString(_ date: Date) -> String {
+        let seconds = Int(Date().timeIntervalSince(date))
+        if seconds < 60 { return "\(seconds) sec ago" }
+        let minutes = seconds / 60
+        if minutes < 60 { return "\(minutes) min ago" }
+        return "\(minutes / 60)h ago"
+    }
 
-    private var errorView: some View {
-        VStack(spacing: 14) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 24))
-                .opacity(0.5)
+    private func formatCost(_ cost: Double, limit: Double) -> String {
+        String(format: "$%.2f / $%.0f", cost, limit)
+    }
 
-            Text("Reading local Codex auth or session files failed.")
-                .font(.system(size: 11))
-                .opacity(0.5)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Button(action: {
-                usageManager.refresh()
-            }) {
-                Text("Retry")
-                    .font(.system(size: 12, weight: .medium))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(.blue)
-            .onHover { hovering in
-                if hovering {
-                    NSCursor.pointingHand.push()
-                } else {
-                    NSCursor.pop()
-                }
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 30)
-        .padding(.vertical, 30)
+    private var openCodeGreen: Color {
+        Color(red: 0.2, green: 0.8, blue: 0.5)
     }
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.0
+
+### New Features
+- **OpenCode Usage widget**: Track OpenCode Go subscription usage from the menu bar. Outer ring shows the rolling 5-hour window, inner ring shows the weekly window, and the terminal icon drains to indicate monthly remaining. Numbers come from the local opencode message database (`~/.local/share/opencode/opencode.db`); a one-tap link in the popup opens the official dashboard at `opencode.ai/auth` for the authoritative numbers — opencode does not yet expose a public usage API ([feature request #16017](https://github.com/anomalyco/opencode/issues/16017)).
+
+### Improvements
+- **Codex Usage widget**: Now surfaces both the primary and secondary rate-limit windows when the latest session snapshot reports them, mirroring how the Codex CLI reports usage.
+
 ## 1.2.9
 
 ### Bug Fixes

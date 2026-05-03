@@ -11,6 +11,10 @@ struct CodexUsageData {
     var primaryResetDate: Date?
     var primaryWindowMinutes: Int = 0
 
+    var secondaryPercentage: Double = 0
+    var secondaryResetDate: Date?
+    var secondaryWindowMinutes: Int = 0
+
     var plan: String = "ChatGPT"
     var lastUpdated: Date = Date()
     var lastActivityDate: Date?
@@ -261,10 +265,14 @@ final class CodexUsageManager: ObservableObject {
         persistAccountFingerprintIfNeeded(auth)
 
         let primaryPercentage = max(0, min(snapshot.bucket.usedPercent / 100, 1))
+        let secondaryPct = snapshot.secondaryBucket.map { max(0, min($0.usedPercent / 100, 1)) } ?? 0
         let data = CodexUsageData(
             primaryPercentage: primaryPercentage,
             primaryResetDate: Date(timeIntervalSince1970: snapshot.bucket.resetsAt),
             primaryWindowMinutes: snapshot.bucket.windowMinutes,
+            secondaryPercentage: secondaryPct,
+            secondaryResetDate: snapshot.secondaryBucket.map { Date(timeIntervalSince1970: $0.resetsAt) },
+            secondaryWindowMinutes: snapshot.secondaryBucket?.windowMinutes ?? 0,
             plan: formatPlan(planOverride ?? snapshot.plan ?? auth.plan),
             lastUpdated: snapshot.timestamp,
             lastActivityDate: activity,
@@ -322,8 +330,8 @@ final class CodexUsageManager: ObservableObject {
         return nil
     }
 
-    nonisolated private static func latestUsageSnapshot(in sessionsURL: URL, after cutoffDate: Date?) -> (bucket: CodexSessionEvent.Bucket, plan: String?, timestamp: Date)? {
-        var latestSnapshot: (bucket: CodexSessionEvent.Bucket, plan: String?, timestamp: Date)?
+    nonisolated private static func latestUsageSnapshot(in sessionsURL: URL, after cutoffDate: Date?) -> (bucket: CodexSessionEvent.Bucket, secondaryBucket: CodexSessionEvent.Bucket?, plan: String?, timestamp: Date)? {
+        var latestSnapshot: (bucket: CodexSessionEvent.Bucket, secondaryBucket: CodexSessionEvent.Bucket?, plan: String?, timestamp: Date)?
 
         for fileURL in recentSessionFiles(in: sessionsURL) {
             guard let content = try? String(contentsOf: fileURL, encoding: .utf8) else {
@@ -354,6 +362,7 @@ final class CodexUsageManager: ObservableObject {
 
                 latestSnapshot = (
                     bucket: bucket,
+                    secondaryBucket: rateLimits.secondary,
                     plan: rateLimits.planType,
                     timestamp: timestamp
                 )
