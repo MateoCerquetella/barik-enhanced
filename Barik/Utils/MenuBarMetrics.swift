@@ -1,84 +1,33 @@
 import AppKit
 import Combine
 
-/// Detects the width of the native macOS system status area (WiFi, battery,
-/// clock, Control Center, etc.) so Barik's widgets can avoid overlapping them.
+/// Reserves trailing space in Barik's menu bar so its widgets don't render
+/// where macOS draws its native status icons (WiFi, battery, clock, Control
+/// Center, etc.).
 ///
-/// Works by placing a tiny NSStatusItem at the left edge of the status area.
-/// Its window x-coordinate tells us where native items begin.
+/// History: previously this measured the actual native-status-area width by
+/// placing a probe NSStatusItem at the left edge and reading its frame. That
+/// turned out to react to third-party menu-bar utilities (Hidden Bar,
+/// Bartender, etc.) — every time the user toggled those, Barik's trailing
+/// widgets shifted around because the underlying width changed. To avoid that
+/// jitter, we now reserve a fixed conservative width that comfortably clears
+/// a typical macOS status area.
 final class MenuBarMetrics: ObservableObject {
     static let shared = MenuBarMetrics()
 
-    /// The width (in points) of the area occupied by native status items.
-    @Published var systemStatusAreaWidth: CGFloat = 0
-
-    private var statusItem: NSStatusItem?
-    private var timer: Timer?
-    private var hasDetected = false
+    /// Fixed trailing reservation in points. Chosen to clear the native
+    /// status-area cluster on a typical macOS setup. Override per-user via
+    /// the `experimental.foreground.horizontalPadding` config — Barik uses
+    /// `max(horizontalPadding, systemStatusAreaWidth)` for the trailing pad.
+    @Published var systemStatusAreaWidth: CGFloat = 220
 
     private init() {}
 
-    func startDetecting() {
-        stopDetecting()
+    /// Kept for API compatibility with AppDelegate's lifecycle hooks; the
+    /// reservation is static and does not need to be re-detected on wake or
+    /// session changes.
+    func startDetecting() {}
 
-        // 1-pixel wide status item — practically invisible.
-        statusItem = NSStatusBar.system.statusItem(withLength: 1)
-        statusItem?.button?.alphaValue = 0
-
-        // Retry detection until it succeeds.
-        timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
-            self?.detect()
-        }
-
-        // Also try immediately after a short delay.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            self?.detect()
-        }
-    }
-
-    func restartDetection() {
-        hasDetected = false
-        startDetecting()
-    }
-
-    private func detect() {
-        guard let button = statusItem?.button,
-              let window = button.window,
-              let screen = window.screen ?? NSScreen.main else { return }
-
-        // Our status item sits at the left edge of all status items.
-        // Everything to its right is native/third-party status items.
-        let probeRightEdge = window.frame.origin.x + window.frame.width
-        let screenMaxX = screen.frame.maxX
-        let width = screenMaxX - probeRightEdge
-
-        if width > 10 && width < screenMaxX * 0.5 {
-            if !hasDetected || abs(systemStatusAreaWidth - width) > 2 {
-                systemStatusAreaWidth = width
-                hasDetected = true
-            }
-        }
-
-        // Once detected, slow down the timer.
-        if hasDetected {
-            timer?.invalidate()
-            timer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { [weak self] _ in
-                self?.detect()
-            }
-        }
-    }
-
-    private func stopDetecting() {
-        timer?.invalidate()
-        timer = nil
-
-        if let item = statusItem {
-            NSStatusBar.system.removeStatusItem(item)
-        }
-        statusItem = nil
-    }
-
-    deinit {
-        stopDetecting()
-    }
+    /// Kept for API compatibility. No-op — see `startDetecting`.
+    func restartDetection() {}
 }

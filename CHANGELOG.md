@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.1
+
+### Bug Fixes
+- **Layout jitter with Hidden Bar / Bartender**: Stopped reacting to changes in the native status-area width. Toggling utilities like Hidden Bar no longer causes Barik's trailing widgets (clock, gear) to shift. The trailing reservation is now a fixed conservative width — adjust `experimental.foreground.horizontalPadding` in your config if you need more space.
+
 ## 1.3.0
 
 ### New Features
