@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.2
+
+### Bug Fixes
+- **Homebrew install name**: The built app is now natively produced as `BarikEnhanced.app` (matching the Homebrew cask), instead of `Barik.app` that brew had to rename on install. Bundle identifier (`com.mateocerquetella.BarikEnhanced`) is unchanged, so existing installs upgrade in place.
+- **Display name**: Corrected `CFBundleDisplayName` from the accidental "BarikEnhanced Enhanced" introduced during the project rename back to "Barik Enhanced".
+
+### Internal
+- Renamed the source tree, Xcode project, scheme, and entitlements from `Barik` → `BarikEnhanced` to match the distributed product name. No functional changes.
+
 ## 1.3.1
 
 ### Bug Fixes
