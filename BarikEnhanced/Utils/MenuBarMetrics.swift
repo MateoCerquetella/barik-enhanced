@@ -15,11 +15,12 @@ import Combine
 final class MenuBarMetrics: ObservableObject {
     static let shared = MenuBarMetrics()
 
-    /// Fixed trailing reservation in points. Chosen to clear the native
-    /// status-area cluster on a typical macOS setup. Override per-user via
-    /// the `experimental.foreground.horizontalPadding` config — Barik Enhanced uses
-    /// `max(horizontalPadding, systemStatusAreaWidth)` for the trailing pad.
-    @Published var systemStatusAreaWidth: CGFloat = 220
+    /// Trailing reservation in points. Defaults to 0 so the bar runs
+    /// edge-to-edge; users who want a cushion can set
+    /// `experimental.foreground.horizontalPadding` in their config —
+    /// Barik Enhanced uses `max(horizontalPadding, systemStatusAreaWidth)`
+    /// for the trailing pad.
+    @Published var systemStatusAreaWidth: CGFloat = 0
 
     private init() {}
 

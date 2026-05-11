@@ -2,6 +2,10 @@
 
 ## 1.3.2
 
+### Improvements
+- **Full-width menu bar**: The bar now extends edge-to-edge by default. The fixed 220pt trailing reservation introduced in 1.3.1 (to avoid Hidden Bar / Bartender jitter) is gone — set `experimental.foreground.horizontalPadding` in your config if you still want a cushion before the native status area.
+- **Universal binary**: Now shipped as a universal app (arm64 + x86_64). Apple Silicon Macs run the native slice instead of going through Rosetta.
+
 ### Bug Fixes
 - **Homebrew install name**: The built app is now natively produced as `BarikEnhanced.app` (matching the Homebrew cask), instead of `Barik.app` that brew had to rename on install. Bundle identifier (`com.mateocerquetella.BarikEnhanced`) is unchanged, so existing installs upgrade in place.
 - **Display name**: Corrected `CFBundleDisplayName` from the accidental "BarikEnhanced Enhanced" introduced during the project rename back to "Barik Enhanced".
