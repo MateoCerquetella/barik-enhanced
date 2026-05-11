@@ -181,13 +181,13 @@ final class AppUpdater: ObservableObject {
                 try unzipProcess.run()
                 unzipProcess.waitUntilExit()
 
-                let newAppURL = tempDir.appendingPathComponent("Barik.app")
+                let newAppURL = tempDir.appendingPathComponent("BarikEnhanced.app")
                 if fileManager.fileExists(atPath: newAppURL.path) {
                     DispatchQueue.main.async {
                         completion(tempDir)
                     }
                 } else {
-                    print("Unzipping failed: Barik.app not found in archive")
+                    print("Unzipping failed: BarikEnhanced.app not found in archive")
                     DispatchQueue.main.async {
                         completion(nil)
                     }
@@ -230,8 +230,8 @@ final class AppUpdater: ObservableObject {
             return
         }
         let newAppURL = URL(fileURLWithPath: downloadedPath)
-            .appendingPathComponent("Barik.app")
-        let destinationURL = URL(fileURLWithPath: "/Applications/Barik.app")
+            .appendingPathComponent("BarikEnhanced.app")
+        let destinationURL = URL(fileURLWithPath: "/Applications/BarikEnhanced.app")
         let script = """
             #!/bin/bash
             sleep 2

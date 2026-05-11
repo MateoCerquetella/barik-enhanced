@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "C10E2F892D41235900AC957C"
-               BuildableName = "Barik.app"
-               BlueprintName = "Barik"
-               ReferencedContainer = "container:Barik.xcodeproj">
+               BuildableName = "BarikEnhanced.app"
+               BlueprintName = "BarikEnhanced"
+               ReferencedContainer = "container:BarikEnhanced.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -45,9 +45,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C10E2F892D41235900AC957C"
-            BuildableName = "Barik.app"
-            BlueprintName = "Barik"
-            ReferencedContainer = "container:Barik.xcodeproj">
+            BuildableName = "BarikEnhanced.app"
+            BlueprintName = "BarikEnhanced"
+            ReferencedContainer = "container:BarikEnhanced.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -62,9 +62,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C10E2F892D41235900AC957C"
-            BuildableName = "Barik.app"
-            BlueprintName = "Barik"
-            ReferencedContainer = "container:Barik.xcodeproj">
+            BuildableName = "BarikEnhanced.app"
+            BlueprintName = "BarikEnhanced"
+            ReferencedContainer = "container:BarikEnhanced.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

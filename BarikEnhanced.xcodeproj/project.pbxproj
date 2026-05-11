@@ -12,26 +12,26 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		C10E2F8A2D41235900AC957C /* Barik.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Barik.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C10E2F8A2D41235900AC957C /* BarikEnhanced.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BarikEnhanced.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		C1BB4B422D526B5C00A1F46E /* Exceptions for "Barik" folder in "Barik" target */ = {
+		C1BB4B422D526B5C00A1F46E /* Exceptions for "BarikEnhanced" folder in "BarikEnhanced" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = C10E2F892D41235900AC957C /* Barik */;
+			target = C10E2F892D41235900AC957C /* BarikEnhanced */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		C1BB4B332D526B5C00A1F46E /* Barik */ = {
+		C1BB4B332D526B5C00A1F46E /* BarikEnhanced */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				C1BB4B422D526B5C00A1F46E /* Exceptions for "Barik" folder in "Barik" target */,
+				C1BB4B422D526B5C00A1F46E /* Exceptions for "BarikEnhanced" folder in "BarikEnhanced" target */,
 			);
-			path = Barik;
+			path = BarikEnhanced;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -53,14 +53,14 @@
 			isa = PBXGroup;
 			children = (
 				C10E2F8B2D41235900AC957C /* Products */,
-				C1BB4B332D526B5C00A1F46E /* Barik */,
+				C1BB4B332D526B5C00A1F46E /* BarikEnhanced */,
 			);
 			sourceTree = "<group>";
 		};
 		C10E2F8B2D41235900AC957C /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				C10E2F8A2D41235900AC957C /* Barik.app */,
+				C10E2F8A2D41235900AC957C /* BarikEnhanced.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -68,9 +68,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		C10E2F892D41235900AC957C /* Barik */ = {
+		C10E2F892D41235900AC957C /* BarikEnhanced */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = C10E2FAF2D41235B00AC957C /* Build configuration list for PBXNativeTarget "Barik" */;
+			buildConfigurationList = C10E2FAF2D41235B00AC957C /* Build configuration list for PBXNativeTarget "BarikEnhanced" */;
 			buildPhases = (
 				C10E2F862D41235900AC957C /* Sources */,
 				C10E2F872D41235900AC957C /* Frameworks */,
@@ -81,15 +81,15 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				C1BB4B332D526B5C00A1F46E /* Barik */,
+				C1BB4B332D526B5C00A1F46E /* BarikEnhanced */,
 			);
-			name = Barik;
+			name = BarikEnhanced;
 			packageProductDependencies = (
 				F66C98C42D60E35600C3C53C /* TOMLDecoder */,
 				F6B514032D6C5F3400DFEB43 /* MarkdownUI */,
 			);
-			productName = Barik;
-			productReference = C10E2F8A2D41235900AC957C /* Barik.app */;
+			productName = BarikEnhanced;
+			productReference = C10E2F8A2D41235900AC957C /* BarikEnhanced.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -107,7 +107,7 @@
 					};
 				};
 			};
-			buildConfigurationList = C10E2F852D41235900AC957C /* Build configuration list for PBXProject "Barik" */;
+			buildConfigurationList = C10E2F852D41235900AC957C /* Build configuration list for PBXProject "BarikEnhanced" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -143,7 +143,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				C10E2F892D41235900AC957C /* Barik */,
+				C10E2F892D41235900AC957C /* BarikEnhanced */,
 			);
 		};
 /* End PBXProject section */
@@ -294,7 +294,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Barik/Barik.entitlements;
+				CODE_SIGN_ENTITLEMENTS = BarikEnhanced/BarikEnhanced.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 16;
@@ -303,8 +303,8 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Barik/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Barik Enhanced";
+				INFOPLIST_FILE = BarikEnhanced/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "BarikEnhanced Enhanced";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "We need this permission for control of third-party media players via an interactive widget";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "We need this permission for displaying calendar events";
@@ -328,7 +328,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Barik/Barik.entitlements;
+				CODE_SIGN_ENTITLEMENTS = BarikEnhanced/BarikEnhanced.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 16;
@@ -337,8 +337,8 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Barik/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Barik Enhanced";
+				INFOPLIST_FILE = BarikEnhanced/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "BarikEnhanced Enhanced";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "We need this permission for control of third-party media players via an interactive widget";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "We need this permission for displaying calendar events";
@@ -360,7 +360,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		C10E2F852D41235900AC957C /* Build configuration list for PBXProject "Barik" */ = {
+		C10E2F852D41235900AC957C /* Build configuration list for PBXProject "BarikEnhanced" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				C10E2FAD2D41235B00AC957C /* Debug */,
@@ -369,7 +369,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		C10E2FAF2D41235B00AC957C /* Build configuration list for PBXNativeTarget "Barik" */ = {
+		C10E2FAF2D41235B00AC957C /* Build configuration list for PBXNativeTarget "BarikEnhanced" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				C10E2FB02D41235B00AC957C /* Debug */,

@@ -67,7 +67,7 @@ brew install --cask barik-enhanced
 ```bash
 git clone https://github.com/MateoCerquetella/barik-enhanced.git
 cd barik-enhanced
-open Barik.xcodeproj
+open BarikEnhanced.xcodeproj
 ```
 Build and run with Xcode (Cmd+R).
 

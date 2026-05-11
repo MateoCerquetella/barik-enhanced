@@ -215,3 +215,11 @@ xcuserdata/
 ####
 # UNKNOWN: recommended by others, but I can't discover what these files are
 #
+
+####
+# Barik Enhanced — local-only artifacts and tool configs
+#
+build-*/
+.opencode/
+*.bak.app
+PRD-*.md
