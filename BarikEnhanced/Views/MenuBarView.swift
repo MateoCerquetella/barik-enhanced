@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct MenuBarView: View {
     @ObservedObject var configManager = ConfigManager.shared
@@ -6,6 +7,23 @@ struct MenuBarView: View {
     @State private var draggedItem: TomlWidgetItem?
     @State private var displayedItems: [TomlWidgetItem] = []
     @State private var settingsRect: CGRect = .zero
+
+    /// Trailing reservation. Wide screens get the original edge-to-edge
+    /// behavior (0 by default); narrow screens automatically get clearance
+    /// from the native macOS status icons (WiFi, battery, Control Center,
+    /// etc.) that draw on top of barik's window level. User can override
+    /// via `experimental.foreground.system-status-reservation`.
+    private var trailingReservation: CGFloat {
+        let hp = configManager.config.experimental.foreground.horizontalPadding
+        if let userReservation = configManager.config.experimental.foreground.systemStatusReservation {
+            return max(hp, userReservation)
+        }
+        let narrowestScreenWidth = NSScreen.screens.map { $0.frame.width }.min() ?? .infinity
+        if narrowestScreenWidth < 1500 {
+            return max(hp, 220)
+        }
+        return max(hp, menuBarMetrics.systemStatusAreaWidth)
+    }
 
     var body: some View {
         let regularItems = displayedItems.filter { $0.id != "default.time" }
@@ -49,6 +67,7 @@ struct MenuBarView: View {
                             .layoutPriority(1_000)
                     }
                 }
+                .padding(.leading, 8)
                 .layoutPriority(1_000)
             }
 
@@ -82,7 +101,7 @@ struct MenuBarView: View {
         .frame(height: max(configManager.config.experimental.foreground.resolveHeight(), 1.0))
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: configManager.config.experimental.position == .bottom ? .bottomLeading : .topLeading)
         .padding(.leading, configManager.config.experimental.foreground.horizontalPadding)
-        .padding(.trailing, max(configManager.config.experimental.foreground.horizontalPadding, menuBarMetrics.systemStatusAreaWidth))
+        .padding(.trailing, trailingReservation)
         .background(.black.opacity(0.001))
         .preferredColorScheme(theme)
         .onAppear {

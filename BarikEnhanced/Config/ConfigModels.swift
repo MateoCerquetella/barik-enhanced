@@ -296,27 +296,31 @@ struct ForegroundConfig: Decodable {
     let horizontalPadding: CGFloat
     let widgetsBackground: WidgetBackgroundConfig
     let spacing: CGFloat
-    
+    let systemStatusReservation: CGFloat?
+
     init() {
         self.height = .barikDefault
         self.horizontalPadding = Constants.menuBarHorizontalPadding
         self.widgetsBackground = WidgetBackgroundConfig()
         self.spacing = 15
+        self.systemStatusReservation = nil
     }
-    
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         height = try container.decodeIfPresent(BackgroundForegroundHeight.self, forKey: .height) ?? .barikDefault
         horizontalPadding = try container.decodeIfPresent(CGFloat.self, forKey: .horizontalPadding) ?? Constants.menuBarHorizontalPadding
         widgetsBackground = try container.decodeIfPresent(WidgetBackgroundConfig.self, forKey: .widgetsBackground) ?? WidgetBackgroundConfig()
         spacing = try container.decodeIfPresent(CGFloat.self, forKey: .spacing) ?? 15
+        systemStatusReservation = try container.decodeIfPresent(CGFloat.self, forKey: .systemStatusReservation)
     }
-    
+
     enum CodingKeys: String, CodingKey {
         case height
         case horizontalPadding = "horizontal-padding"
         case widgetsBackground = "widgets-background"
         case spacing
+        case systemStatusReservation = "system-status-reservation"
     }
     
     func resolveHeight() -> CGFloat {

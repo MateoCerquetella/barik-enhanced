@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.3
+
+### Bug Fixes
+- **Time + settings gear hidden on narrow displays**: After 1.3.2 made the bar edge-to-edge by default, the rightmost widgets (clock and settings cog) were drawn underneath the native macOS status icons on narrow screens (e.g., 16" MacBook at "Larger Text" scaling). Wide-screen layouts are unchanged. Narrow displays (effective width under 1500pt) now automatically reserve enough trailing space to keep the time and gear visible. Override with `experimental.foreground.system-status-reservation` in your config (set to `0` to force edge-to-edge).
+
+### Improvements
+- **Time widget margin**: Added a small leading gap before the time so it doesn't sit flush against the preceding widget.
+
 ## 1.3.2
 
 ### Improvements
