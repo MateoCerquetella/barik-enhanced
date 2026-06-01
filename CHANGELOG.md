@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.4
+
+### Bug Fixes
+- **Claude Usage widget: repeated keychain password prompts**: The Claude Usage widget read Claude Code's keychain item (`Claude Code-credentials`) on every refresh — the 60-second timer plus a burst on every wake/screen-wake — which popped the macOS "Barik Enhanced wants to access key" dialog over and over. ("Always Allow" never stuck because Claude Code resets that item's access list whenever it refreshes its own OAuth token.) The widget now caches the token in memory and reuses it until it actually expires, so background refreshes never touch the keychain. The keychain is only read on first connect, when you press "Allow Access", or once the token has expired.
+
 ## 1.3.3
 
 ### Bug Fixes

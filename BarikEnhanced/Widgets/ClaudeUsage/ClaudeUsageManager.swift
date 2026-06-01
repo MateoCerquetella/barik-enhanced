@@ -52,8 +52,24 @@ final class ClaudeUsageManager: ObservableObject {
 
     private var refreshTimer: Timer?
     private var recoveryTask: Task<Void, Never>?
-    private var cachedCredentials: (accessToken: String, plan: String)?
+    private var cachedCredentials: Credentials?
     private var currentConfig: ConfigData = [:]
+
+    /// A snapshot of the OAuth token read from Claude Code's keychain item.
+    /// `expiresAt` lets us keep reusing the in-memory token until it actually
+    /// expires, instead of re-reading the (foreign) keychain item on a timer —
+    /// every such read can pop the macOS authorization dialog.
+    private struct Credentials {
+        let accessToken: String
+        let plan: String
+        let expiresAt: Date?
+
+        var isExpired: Bool {
+            guard let expiresAt else { return false }
+            // Refresh a minute early to avoid racing the expiry boundary.
+            return Date() >= expiresAt.addingTimeInterval(-60)
+        }
+    }
 
     private static let connectedKey = "claude-usage-connected"
     private static let refreshInterval: TimeInterval = 60
@@ -103,11 +119,7 @@ final class ClaudeUsageManager: ObservableObject {
     }
 
     func reconnectIfNeeded() {
-        if cachedCredentials != nil {
-            isConnected = true
-            fetchData()
-            scheduleRefreshTimer()
-        } else if !isConnected && UserDefaults.standard.bool(forKey: Self.connectedKey) {
+        if cachedCredentials != nil || UserDefaults.standard.bool(forKey: Self.connectedKey) {
             connectAndFetch(allowUserPrompt: false)
         }
     }
@@ -130,6 +142,10 @@ final class ClaudeUsageManager: ObservableObject {
     }
 
     private func handleWake() {
+        // Only re-run the network fetch after wake. If we have nothing cached
+        // there's nothing to refresh — and re-reading the keychain here would
+        // pop the authorization dialog. connectAndFetch reuses the cached token.
+        guard cachedCredentials != nil else { return }
         refreshTimer?.invalidate()
         recoveryTask?.cancel()
         recoveryTask = Task { @MainActor [weak self] in
@@ -144,9 +160,20 @@ final class ClaudeUsageManager: ObservableObject {
     }
 
     private func connectAndFetch(allowUserPrompt: Bool) {
-        let credentials = readKeychainCredentials(allowUserPrompt: allowUserPrompt)
+        // Reuse the in-memory token while it's still valid. This is the core fix
+        // for the repeated keychain prompt: background refreshes (the 60s timer
+        // and the wake bursts) must never re-read the foreign
+        // "Claude Code-credentials" item, because each read can trigger the macOS
+        // authorization dialog — and Claude Code resets the item's ACL whenever
+        // it refreshes its own token, so "Always Allow" never sticks.
+        if !allowUserPrompt, let cached = cachedCredentials, !cached.isExpired {
+            isConnected = true
+            fetchData()
+            scheduleRefreshTimer()
+            return
+        }
 
-        if let credentials {
+        if let credentials = readKeychainCredentials(allowUserPrompt: allowUserPrompt) {
             cachedCredentials = credentials
             isConnected = true
             UserDefaults.standard.set(true, forKey: Self.connectedKey)
@@ -155,13 +182,19 @@ final class ClaudeUsageManager: ObservableObject {
             return
         }
 
-        if cachedCredentials != nil {
+        // Read failed (item missing, or we're no longer on its ACL). Keep
+        // serving the last known token if it's still valid rather than dropping
+        // the UI mid-session.
+        if let cached = cachedCredentials, !cached.isExpired {
             isConnected = true
             fetchData()
             scheduleRefreshTimer()
             return
         }
 
+        // No usable token. Surface the reconnect UI and stop the timer so we
+        // don't keep hitting the keychain on a schedule.
+        cachedCredentials = nil
         isConnected = false
         errorMessage = nil
         UserDefaults.standard.set(false, forKey: Self.connectedKey)
@@ -281,13 +314,19 @@ final class ClaudeUsageManager: ObservableObject {
 
     // MARK: - Keychain
 
-    private func readKeychainCredentials(allowUserPrompt: Bool) -> (accessToken: String, plan: String)? {
+    private func readKeychainCredentials(allowUserPrompt: Bool) -> Credentials? {
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: "Claude Code-credentials",
             kSecReturnData as String: true,
         ]
         if !allowUserPrompt {
+            // Best-effort hint to avoid presenting auth UI on background reads.
+            // NOTE: this does NOT suppress the classic cross-app keychain ACL
+            // dialog for an item owned by another app (Claude Code) — nothing
+            // does. The real protection against the repeated prompt is that
+            // connectAndFetch only reaches this method when there's no valid
+            // cached token, so background refreshes never read the keychain.
             let context = LAContext()
             context.interactionNotAllowed = true
             query[kSecUseAuthenticationContext as String] = context
@@ -303,6 +342,10 @@ final class ClaudeUsageManager: ObservableObject {
             return nil
         }
         let plan = oauth["subscriptionType"] as? String ?? "pro"
-        return (token, plan)
+        // `expiresAt` is a Unix epoch in milliseconds, when present.
+        let expiresAt = (oauth["expiresAt"] as? Double).map { millis in
+            Date(timeIntervalSince1970: millis / 1000)
+        }
+        return Credentials(accessToken: token, plan: plan, expiresAt: expiresAt)
     }
 }
