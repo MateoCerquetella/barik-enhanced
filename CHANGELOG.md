@@ -1,11 +1,17 @@
 # Changelog
 
+## 1.3.6
+
+### Improvements
+- **Pinned right-side layout**: Widgets after the first spacer/divider are now in an independent ZStack layer anchored to the right edge — they never shift when left-side content (e.g. AeroSpace window titles) changes width. Left-side widgets are clipped instead of pushing the right side.
+- **Spaces widget: smart title truncation**: Focused window titles auto-trim to 20 characters when a space has more than 3 windows (instead of the default 50), keeping spaces compact.
+- **Vertical centering**: Both ZStack layers fill the full bar height so widgets are vertically centered.
+
 ## 1.3.5
 
 ### Improvements
-- **Subtle full-screen background blur**: Reverted to the upstream Barik blur style — full-screen `Material` blur with no rounded corners, shadows, or strokes. The `blur` config key (1–6) controls intensity; `blur = 7` gives a black overlay.
-- **Right-side menu bar layout anchored and static**: Time, settings gear, and system banner widgets are now fixed to the right with a 220pt clearance from the screen edge, ensuring they never shift when opening more apps. Left-side widgets clip gracefully instead of colliding.
-- **NSPanel transparency fix**: The background and menu bar panels now explicitly set `isOpaque = false` with layer-backed hosting views, ensuring `Material` blur composites correctly.
+- **Subtle full-screen background blur**: Reverted to the upstream Barik blur style — full-screen `Material` blur with no rounded corners, shadows, or strokes. Configurable via `blur` (1–6 intensity, 7 = black).
+- **NSPanel transparency fix**: The background and menu bar panels now set `isOpaque = false` with layer-backed hosting views, ensuring `Material` blur composites correctly.
 
 ### Bug Fixes
 - **Claude Usage widget: repeated keychain password prompts**: The Claude Usage widget read Claude Code's keychain item (`Claude Code-credentials`) on every refresh — the 60-second timer plus a burst on every wake/screen-wake — which popped the macOS "Barik Enhanced wants to access key" dialog over and over. ("Always Allow" never stuck because Claude Code resets that item's access list whenever it refreshes its own OAuth token.) The widget now caches the token in memory and reuses it until it actually expires, so background refreshes never touch the keychain. The keychain is only read on first connect, when you press "Allow Access", or once the token has expired.

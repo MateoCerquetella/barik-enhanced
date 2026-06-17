@@ -8,20 +8,48 @@ struct MenuBarView: View {
     @State private var displayedItems: [TomlWidgetItem] = []
     @State private var settingsRect: CGRect = .zero
 
-    /// Trailing reservation. Reserves 220 pt from the right edge for macOS
-    /// native status icons (Wi‑Fi, battery, clock, Control Center, etc.).
-    /// Override via `experimental.foreground.system-status-reservation`.
+    /// Trailing reservation. Narrow screens get 220 pt clearance from macOS
+    /// status icons; wide screens use only horizontal-padding so the bar
+    /// stays visually close to the right edge. Override with
+    /// `experimental.foreground.system-status-reservation`.
     private var trailingReservation: CGFloat {
         let hp = configManager.config.experimental.foreground.horizontalPadding
         if let userReservation = configManager.config.experimental.foreground.systemStatusReservation {
             return max(hp, userReservation)
         }
-        return max(hp, 220)
+        let narrowestScreenWidth = NSScreen.screens.map { $0.frame.width }.min() ?? .infinity
+        if narrowestScreenWidth < 1500 {
+            return max(hp, 220)
+        }
+        return hp
+    }
+
+    /// Splits regular items at the first spacer or divider widget.
+    /// Everything before becomes the left (clipped) section;
+    /// everything after becomes the right (pinned) section.
+    private func splitItems(_ items: [TomlWidgetItem]) -> (left: [TomlWidgetItem], right: [TomlWidgetItem]) {
+        var left: [TomlWidgetItem] = []
+        var right: [TomlWidgetItem] = []
+        var foundSplit = false
+        for item in items {
+            if !foundSplit, item.id == "spacer" || item.id == "divider" {
+                foundSplit = true
+                continue
+            }
+            if foundSplit {
+                right.append(item)
+            } else {
+                left.append(item)
+            }
+        }
+        return (left, right)
     }
 
     var body: some View {
-        let regularItems = displayedItems.filter { $0.id != "default.time" }
         let timeItems = displayedItems.filter { $0.id == "default.time" }
+        let regularItems = displayedItems.filter { $0.id != "default.time" }
+        let (leftItems, rightItems) = splitItems(regularItems)
+
         let theme: ColorScheme? =
             switch configManager.config.rootToml.theme {
             case "dark":
@@ -32,60 +60,66 @@ struct MenuBarView: View {
                 .none
             }
 
-        HStack(spacing: 0) {
+        ZStack(alignment: .topLeading) {
             HStack(spacing: configManager.config.experimental.foreground.spacing) {
-                ForEach(regularItems) { item in
+                ForEach(leftItems) { item in
                     draggableWidget(for: item)
                 }
             }
             .clipped()
-            .contextMenu {
-                Button("Configure Widgets...") {
-                    WidgetConfiguratorWindow.show()
-                }
-                Button("Edit Config...") {
-                    openConfigFile()
-                }
-                Divider()
-                Button("Quit Barik Enhanced") {
-                    NSApp.terminate(nil)
-                }
-            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .padding(.trailing, 180)
 
-            Spacer(minLength: 0)
+            HStack(spacing: configManager.config.experimental.foreground.spacing) {
+                Spacer(minLength: 0)
 
-            if !timeItems.isEmpty {
-                HStack(spacing: configManager.config.experimental.foreground.spacing) {
+                ForEach(rightItems) { item in
+                    draggableWidget(for: item)
+                }
+
+                if !timeItems.isEmpty {
                     ForEach(timeItems) { item in
                         draggableWidget(for: item)
                             .fixedSize(horizontal: true, vertical: false)
                     }
                 }
-                .padding(.leading, 8)
-            }
 
-            Image(systemName: "gearshape.fill")
-                .font(.system(size: 12))
-                .foregroundStyle(.white.opacity(0.4))
-                .frame(maxHeight: .infinity)
-                .background(
-                    GeometryReader { geometry in
-                        Color.clear
-                            .onAppear { settingsRect = geometry.frame(in: .global) }
-                            .onChange(of: geometry.frame(in: .global)) { _, newState in settingsRect = newState }
-                    }
-                )
-                .background(.black.opacity(0.001))
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    MenuBarPopup.show(rect: settingsRect, id: "settings") {
-                        SettingsMenuView()
-                    }
+                if !displayedItems.contains(where: { $0.id == "system-banner" }) {
+                    SystemBannerWidget(withLeftPadding: false)
                 }
-                .padding(.leading, 8)
 
-            if !displayedItems.contains(where: { $0.id == "system-banner" }) {
-                SystemBannerWidget(withLeftPadding: true)
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.white.opacity(0.4))
+                    .frame(maxHeight: .infinity)
+                    .background(
+                        GeometryReader { geometry in
+                            Color.clear
+                                .onAppear { settingsRect = geometry.frame(in: .global) }
+                                .onChange(of: geometry.frame(in: .global)) { _, newState in settingsRect = newState }
+                        }
+                    )
+                    .background(.black.opacity(0.001))
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        MenuBarPopup.show(rect: settingsRect, id: "settings") {
+                            SettingsMenuView()
+                        }
+                    }
+                    .padding(.leading, 8)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+        }
+        .contextMenu {
+            Button("Configure Widgets...") {
+                WidgetConfiguratorWindow.show()
+            }
+            Button("Edit Config...") {
+                openConfigFile()
+            }
+            Divider()
+            Button("Quit Barik Enhanced") {
+                NSApp.terminate(nil)
             }
         }
         .foregroundStyle(Color.foregroundOutside)

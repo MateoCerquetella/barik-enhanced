@@ -99,6 +99,7 @@ private struct WindowView: View {
 
     var body: some View {
         let titleMaxLength = maxLength
+        let effectiveMaxLength = space.windows.count > 3 ? min(titleMaxLength, 20) : titleMaxLength
         let size: CGFloat = 21
         let sameAppCount = space.windows.filter { $0.appName == window.appName }
             .count
@@ -126,8 +127,8 @@ private struct WindowView: View {
             if window.isFocused, !title.isEmpty, showTitle {
                 HStack {
                     Text(
-                        title.count > titleMaxLength
-                            ? String(title.prefix(titleMaxLength)) + "..."
+                        title.count > effectiveMaxLength
+                            ? String(title.prefix(effectiveMaxLength)) + "..."
                             : title
                     )
                     .fixedSize(horizontal: true, vertical: false)
