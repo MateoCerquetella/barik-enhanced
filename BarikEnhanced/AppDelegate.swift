@@ -151,11 +151,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false)
         newPanel.level = NSWindow.Level(rawValue: level)
+        newPanel.isOpaque = false
         newPanel.backgroundColor = .clear
         newPanel.hasShadow = false
         newPanel.isReleasedWhenClosed = false
         newPanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
-        newPanel.contentView = NSHostingView(rootView: hostingRootView)
+        let hostingView = NSHostingView(rootView: hostingRootView)
+        hostingView.wantsLayer = true
+        hostingView.layer?.isOpaque = false
+        newPanel.contentView = hostingView
         newPanel.orderFront(nil)
         return newPanel
     }
