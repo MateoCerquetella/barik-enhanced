@@ -8,21 +8,15 @@ struct MenuBarView: View {
     @State private var displayedItems: [TomlWidgetItem] = []
     @State private var settingsRect: CGRect = .zero
 
-    /// Trailing reservation. Wide screens get the original edge-to-edge
-    /// behavior (0 by default); narrow screens automatically get clearance
-    /// from the native macOS status icons (WiFi, battery, Control Center,
-    /// etc.) that draw on top of barik's window level. User can override
-    /// via `experimental.foreground.system-status-reservation`.
+    /// Trailing reservation. Reserves 220 pt from the right edge for macOS
+    /// native status icons (Wi‑Fi, battery, clock, Control Center, etc.).
+    /// Override via `experimental.foreground.system-status-reservation`.
     private var trailingReservation: CGFloat {
         let hp = configManager.config.experimental.foreground.horizontalPadding
         if let userReservation = configManager.config.experimental.foreground.systemStatusReservation {
             return max(hp, userReservation)
         }
-        let narrowestScreenWidth = NSScreen.screens.map { $0.frame.width }.min() ?? .infinity
-        if narrowestScreenWidth < 1500 {
-            return max(hp, 220)
-        }
-        return max(hp, menuBarMetrics.systemStatusAreaWidth)
+        return max(hp, 220)
     }
 
     var body: some View {
@@ -44,7 +38,6 @@ struct MenuBarView: View {
                     draggableWidget(for: item)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
             .clipped()
             .contextMenu {
                 Button("Configure Widgets...") {
@@ -59,19 +52,18 @@ struct MenuBarView: View {
                 }
             }
 
+            Spacer(minLength: 0)
+
             if !timeItems.isEmpty {
                 HStack(spacing: configManager.config.experimental.foreground.spacing) {
                     ForEach(timeItems) { item in
                         draggableWidget(for: item)
                             .fixedSize(horizontal: true, vertical: false)
-                            .layoutPriority(1_000)
                     }
                 }
                 .padding(.leading, 8)
-                .layoutPriority(1_000)
             }
 
-            // Settings gear button
             Image(systemName: "gearshape.fill")
                 .font(.system(size: 12))
                 .foregroundStyle(.white.opacity(0.4))

@@ -223,3 +223,4 @@ build-*/
 .opencode/
 *.bak.app
 PRD-*.md
+.claude/
