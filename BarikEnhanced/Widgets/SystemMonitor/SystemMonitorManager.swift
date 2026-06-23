@@ -2,8 +2,16 @@ import Combine
 import Foundation
 import Darwin
 import IOKit
+import os
 
 /// This class monitors system performance metrics: CPU, RAM, Temperature, and Network Activity.
+///
+/// Architecture: Uses a dual-timer approach for efficiency:
+/// - CPU/RAM: Fixed 2s interval via DispatchSourceTimer (Mach syscalls cost ~0.01ms)
+/// - Network: Mode-dependent interval (controlled by PerformanceModeManager)
+///
+/// UI updates are gated behind change thresholds to avoid unnecessary SwiftUI re-renders
+/// when values haven't visually changed (CPU ≥2%, RAM ≥1%).
 class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
     static let shared = SystemMonitorManager()
     @Published var cpuLoad: Double = 0.0
@@ -23,16 +31,52 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
     @Published var wiredRAM: Double = 0.0
     @Published var compressedRAM: Double = 0.0
     
-    private var timer: Timer?
+    // MARK: - Dual-timer architecture
+    
+    /// Background queue for all system metric collection (Mach syscalls + getifaddrs)
+    private let backgroundQueue = DispatchQueue(label: "com.barik-enhanced.sysmon", qos: .utility)
+    
+    /// Fast timer for CPU/RAM — fixed 2s interval regardless of performance mode.
+    /// Mach kernel calls are essentially free (~0.01ms total), so this has negligible CPU impact.
+    private var cpuRamTimer: DispatchSourceTimer?
+    
+    /// Slower timer for network stats — interval varies with performance mode.
+    private var networkTimer: DispatchSourceTimer?
+    
+    /// Fixed polling interval for CPU/RAM (2 seconds)
+    private static let cpuRamInterval: TimeInterval = 1.5
+    
+    /// Leeway for timer coalescing — lets macOS batch our timer with other system timers
+    private static let timerLeeway: DispatchTimeInterval = .milliseconds(500)
+    
+    // MARK: - Change-threshold gating
+    
+    /// Only update @Published cpuLoad when it changes by this much (avoids SwiftUI re-renders)
+    private static let cpuChangeThreshold: Double = 2.0
+    
+    /// Only update @Published ramUsage when it changes by this much
+    private static let ramChangeThreshold: Double = 1.0
+    
+    /// Only update @Published CPU breakdown when it changes by this much
+    private static let cpuDetailThreshold: Double = 2.0
+    
+    /// Only update @Published RAM detail when it changes by this much
+    private static let ramDetailThreshold: Double = 0.1  // GB — ~100MB
+    
+    // MARK: - Internal state
+    
     private var previousCpuInfo: processor_info_array_t?
     private var previousCpuInfoCount: mach_msg_type_number_t = 0
     private var previousNetworkData: [String: (ibytes: UInt64, obytes: UInt64)] = [:]
     private var lastNetworkUpdate: Date = Date()
     
-    private var currentInterval: TimeInterval = 10.0
+    private var currentNetworkInterval: TimeInterval = 10.0
     let widgetId = "system-monitor" // This covers both cpuram and networkactivity
     
     private var isActive = false
+    
+    /// Performance logger
+    private static let perfLogger = Logger(subsystem: "com.barik-enhanced.perf", category: "sysmon")
     
     private init() {
         setupNotifications()
@@ -49,7 +93,7 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
     }
     
     private func setupNotifications() {
-        // Listen for performance mode changes
+        // Listen for performance mode changes — only affects network timer
         NotificationCenter.default.addObserver(
             forName: NSNotification.Name("PerformanceModeChanged"),
             object: nil,
@@ -57,7 +101,7 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
         ) { [weak self] notification in
             if let intervals = notification.object as? [String: TimeInterval],
                let newInterval = intervals["system"] {
-                self?.updateTimerInterval(newInterval)
+                self?.updateNetworkTimerInterval(newInterval)
             }
         }
         
@@ -98,10 +142,10 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
         
         isActive = true
         
-        // Get current performance mode interval
+        // Get current performance mode interval for network timer only
         let performanceManager = PerformanceModeManager.shared
         let intervals = performanceManager.getTimerIntervals(for: performanceManager.currentMode)
-        currentInterval = intervals["system"] ?? 10.0
+        currentNetworkInterval = intervals["system"] ?? 10.0
         
         startMonitoring()
     }
@@ -112,66 +156,85 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
         stopMonitoring()
     }
     
-    private func updateTimerInterval(_ newInterval: TimeInterval) {
+    /// Only restarts the network timer — CPU/RAM timer runs at a fixed interval
+    private func updateNetworkTimerInterval(_ newInterval: TimeInterval) {
         guard isActive else { return }
-        currentInterval = newInterval
+        currentNetworkInterval = newInterval
         
-        // Restart timer with new interval
-        stopMonitoring()
-        startMonitoring()
+        // Only restart the network timer
+        stopNetworkTimer()
+        startNetworkTimer()
+        
+        Self.perfLogger.notice("Network timer interval changed to \(newInterval, privacy: .public)s")
     }
 
+    // MARK: - Timer management
+    
     private func startMonitoring() {
-        // Update every X seconds based on performance mode
-        timer = Timer.scheduledTimer(withTimeInterval: currentInterval, repeats: true) { [weak self] _ in
-            // Run system calls on background queue to avoid blocking UI
-            DispatchQueue.global(qos: .utility).async {
-                self?.updateAllMetrics()
-            }
-        }
-        // Initial update on background queue
-        DispatchQueue.global(qos: .utility).async {
-            self.updateAllMetrics()
+        startCPURamTimer()
+        startNetworkTimer()
+        
+        // Initial update immediately
+        backgroundQueue.async { [weak self] in
+            self?.updateCPURAM()
+            self?.updateNetworkActivity()
         }
     }
     
     private func stopMonitoring() {
-        timer?.invalidate()
-        timer = nil
+        stopCPURamTimer()
+        stopNetworkTimer()
     }
     
-    private func updateAllMetrics() {
-        // Add safety checks to prevent hanging
-        autoreleasepool {
-            updateCPUUsage()
-            updateRAMUsage()
-            updateNetworkActivity()
+    /// Starts the fixed-interval CPU/RAM timer (2s, with 500ms leeway for coalescing)
+    private func startCPURamTimer() {
+        let timer = DispatchSource.makeTimerSource(queue: backgroundQueue)
+        timer.schedule(
+            deadline: .now() + Self.cpuRamInterval,
+            repeating: Self.cpuRamInterval,
+            leeway: Self.timerLeeway
+        )
+        timer.setEventHandler { [weak self] in
+            autoreleasepool {
+                self?.updateCPURAM()
+            }
         }
+        timer.resume()
+        cpuRamTimer = timer
     }
     
-    // MARK: - CPU Usage (Simple and Safe)
-    private func updateCPUUsageSimple() {
-        // Use a simple approach via sysctl for CPU usage
-        var load: Double = 0.0
-        var size = MemoryLayout<Double>.size
-        if sysctlbyname("vm.loadavg", &load, &size, nil, 0) == 0 {
-            // Load average represents system load, convert to rough CPU percentage
-            let cpuPercent = min(100.0, max(0.0, load * 25.0)) // Scale load avg to percentage
-            
-            DispatchQueue.main.async {
-                self.cpuLoad = cpuPercent
-                self.userLoad = cpuPercent * 0.7  // Approximate user load
-                self.systemLoad = cpuPercent * 0.3  // Approximate system load
-                self.idleLoad = 100.0 - cpuPercent
-            }
-        } else {
-            DispatchQueue.main.async {
-                self.cpuLoad = 0.0
-                self.userLoad = 0.0
-                self.systemLoad = 0.0
-                self.idleLoad = 100.0
+    private func stopCPURamTimer() {
+        cpuRamTimer?.cancel()
+        cpuRamTimer = nil
+    }
+    
+    /// Starts the mode-dependent network timer
+    private func startNetworkTimer() {
+        let timer = DispatchSource.makeTimerSource(queue: backgroundQueue)
+        timer.schedule(
+            deadline: .now() + currentNetworkInterval,
+            repeating: currentNetworkInterval,
+            leeway: Self.timerLeeway
+        )
+        timer.setEventHandler { [weak self] in
+            autoreleasepool {
+                self?.updateNetworkActivity()
             }
         }
+        timer.resume()
+        networkTimer = timer
+    }
+    
+    private func stopNetworkTimer() {
+        networkTimer?.cancel()
+        networkTimer = nil
+    }
+    
+    // MARK: - CPU + RAM collection (runs every 2s)
+    
+    private func updateCPURAM() {
+        updateCPUUsage()
+        updateRAMUsage()
     }
     
     // MARK: - CPU Usage (via host_processor_info)
@@ -243,15 +306,24 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
             let totalDelta = userDelta + systemDelta + idleDelta + niceDelta
             
             if totalDelta > 0 {
-                let userPercent = min(100.0, max(0.0, Double(userDelta + niceDelta) / Double(totalDelta) * 100.0))
-                let systemPercent = min(100.0, max(0.0, Double(systemDelta) / Double(totalDelta) * 100.0))
-                let idlePercent = min(100.0, max(0.0, Double(idleDelta) / Double(totalDelta) * 100.0))
+                let newUserPercent = min(100.0, max(0.0, Double(userDelta + niceDelta) / Double(totalDelta) * 100.0))
+                let newSystemPercent = min(100.0, max(0.0, Double(systemDelta) / Double(totalDelta) * 100.0))
+                let newIdlePercent = min(100.0, max(0.0, Double(idleDelta) / Double(totalDelta) * 100.0))
+                let newCpuLoad = min(100.0, max(0.0, newUserPercent + newSystemPercent))
                 
-                DispatchQueue.main.async {
-                    self.userLoad = userPercent
-                    self.systemLoad = systemPercent
-                    self.idleLoad = idlePercent
-                    self.cpuLoad = min(100.0, max(0.0, userPercent + systemPercent))
+                // Threshold-gated UI update — only push to @Published if values changed visibly
+                let cpuChanged = abs(newCpuLoad - self.cpuLoad) >= Self.cpuChangeThreshold
+                let detailChanged = abs(newUserPercent - self.userLoad) >= Self.cpuDetailThreshold
+                    || abs(newSystemPercent - self.systemLoad) >= Self.cpuDetailThreshold
+                    || abs(newIdlePercent - self.idleLoad) >= Self.cpuDetailThreshold
+                
+                if cpuChanged || detailChanged {
+                    DispatchQueue.main.async {
+                        self.userLoad = newUserPercent
+                        self.systemLoad = newSystemPercent
+                        self.idleLoad = newIdlePercent
+                        self.cpuLoad = newCpuLoad
+                    }
                 }
             }
         }
@@ -304,20 +376,28 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
         let usedPages = activePages + wiredPages + compressedPages
         let usedMemory = usedPages * pageSize
         
-        let totalMemoryGB = Double(totalMemory) / (1024 * 1024 * 1024)
+        let newTotalMemoryGB = Double(totalMemory) / (1024 * 1024 * 1024)
         let usedMemoryGB = Double(usedMemory) / (1024 * 1024 * 1024)
-        let activeMemoryGB = Double(activePages * pageSize) / (1024 * 1024 * 1024)
-        let wiredMemoryGB = Double(wiredPages * pageSize) / (1024 * 1024 * 1024)
-        let compressedMemoryGB = Double(compressedPages * pageSize) / (1024 * 1024 * 1024)
+        let newActiveMemoryGB = Double(activePages * pageSize) / (1024 * 1024 * 1024)
+        let newWiredMemoryGB = Double(wiredPages * pageSize) / (1024 * 1024 * 1024)
+        let newCompressedMemoryGB = Double(compressedPages * pageSize) / (1024 * 1024 * 1024)
         
-        let ramUsagePercent = totalMemoryGB > 0 ? min(100.0, max(0.0, (usedMemoryGB / totalMemoryGB) * 100.0)) : 0.0
+        let newRamUsagePercent = newTotalMemoryGB > 0 ? min(100.0, max(0.0, (usedMemoryGB / newTotalMemoryGB) * 100.0)) : 0.0
         
-        DispatchQueue.main.async {
-            self.ramUsage = ramUsagePercent
-            self.totalRAM = totalMemoryGB
-            self.activeRAM = activeMemoryGB
-            self.wiredRAM = wiredMemoryGB
-            self.compressedRAM = compressedMemoryGB
+        // Threshold-gated UI update
+        let percentChanged = abs(newRamUsagePercent - self.ramUsage) >= Self.ramChangeThreshold
+        let detailChanged = abs(newActiveMemoryGB - self.activeRAM) >= Self.ramDetailThreshold
+            || abs(newWiredMemoryGB - self.wiredRAM) >= Self.ramDetailThreshold
+            || abs(newCompressedMemoryGB - self.compressedRAM) >= Self.ramDetailThreshold
+        
+        if percentChanged || detailChanged {
+            DispatchQueue.main.async {
+                self.ramUsage = newRamUsagePercent
+                self.totalRAM = newTotalMemoryGB
+                self.activeRAM = newActiveMemoryGB
+                self.wiredRAM = newWiredMemoryGB
+                self.compressedRAM = newCompressedMemoryGB
+            }
         }
     }
     

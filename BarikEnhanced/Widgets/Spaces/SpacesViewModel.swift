@@ -1,15 +1,18 @@
 import AppKit
 import Combine
+import os
 import Foundation
 
 class SpacesViewModel: ObservableObject, ConditionallyActivatableWidget {
     static let shared = SpacesViewModel()
     @Published var spaces: [AnySpace] = []
+    private static let perfLog = Logger(subsystem: "com.barik-enhanced.perf", category: "spaces")
     private var timer: Timer?
     private var recoveryTimer: Timer?
     private var provider: AnySpacesProvider?
     private var currentProviderKind: ProviderKind?
     private var currentInterval: TimeInterval = 5.0
+    private var lastEventLoadTime: CFAbsoluteTime = 0
     let widgetId = "default.spaces"
     
     private var isActive = false
@@ -21,9 +24,33 @@ class SpacesViewModel: ObservableObject, ConditionallyActivatableWidget {
 
     private init() {
         setupNotifications()
+        setupDarwinNotification()
         refreshProvider(force: true)
         // For now, always activate to ensure widgets work
         activate()
+    }
+
+    /// Listens for a Darwin notification posted by AeroSpace's
+    /// `exec-on-workspace-change` / `on-focus-changed` hooks via
+    /// `notifyutil -p com.barik-enhanced.aerospace-refresh`.
+    /// This gives near-instant menu-bar updates on workspace/focus changes
+    /// regardless of the polling interval set by the performance mode.
+    private func setupDarwinNotification() {
+        let callback: CFNotificationCallback = { _, _, _, _, _ in
+            let start = CFAbsoluteTimeGetCurrent()
+            DispatchQueue.main.async {
+                SpacesViewModel.shared.loadSpaces(source: "aerospace-event", triggerTime: start)
+            }
+        }
+
+        CFNotificationCenterAddObserver(
+            CFNotificationCenterGetDarwinNotifyCenter(),
+            nil,
+            callback,
+            "com.barik-enhanced.aerospace-refresh" as CFString,
+            nil,
+            .deliverImmediately
+        )
     }
 
     deinit {
@@ -66,6 +93,15 @@ class SpacesViewModel: ObservableObject, ConditionallyActivatableWidget {
             queue: .main
         ) { [weak self] _ in
             self?.forceRefresh()
+        }
+
+        // Instant refresh on app switch — avoids waiting for the poll timer
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.loadSpaces(source: "app-activation", triggerTime: CFAbsoluteTimeGetCurrent())
         }
 
         NotificationCenter.default.addObserver(
@@ -165,10 +201,22 @@ class SpacesViewModel: ObservableObject, ConditionallyActivatableWidget {
         recoveryTimer = nil
     }
 
-    private func loadSpaces() {
+    fileprivate func loadSpaces(source: String = "timer", triggerTime: CFAbsoluteTime? = nil) {
+        // Debounce event-driven calls: skip if another event-driven load
+        // started within the last 100ms (a single switch fires 3 events)
+        if let t = triggerTime {
+            let now = CFAbsoluteTimeGetCurrent()
+            if (now - lastEventLoadTime) < 0.1 {
+                return
+            }
+            lastEventLoadTime = now
+        }
+
         refreshProvider(force: false)
 
-        DispatchQueue.global(qos: .background).async { [weak self] in
+        // Use higher QoS for event-driven loads (user is waiting)
+        let qos: DispatchQoS.QoSClass = triggerTime != nil ? .userInitiated : .background
+        DispatchQueue.global(qos: qos).async { [weak self] in
             guard let self = self else { return }
             guard let provider = self.provider else {
                 DispatchQueue.main.async {
@@ -188,8 +236,13 @@ class SpacesViewModel: ObservableObject, ConditionallyActivatableWidget {
 
             let sortedSpaces = spaces.sorted { $0.id < $1.id }
             DispatchQueue.main.async {
-                if sortedSpaces != self.spaces {
+                let changed = sortedSpaces != self.spaces
+                if changed {
                     self.spaces = sortedSpaces
+                }
+                if let t = triggerTime {
+                    let latencyMs = (CFAbsoluteTimeGetCurrent() - t) * 1000
+                    Self.perfLog.notice("[\(source, privacy: .public)] UI updated in \(String(format: "%.1f", latencyMs), privacy: .public)ms (changed: \(changed, privacy: .public))")
                 }
             }
         }
