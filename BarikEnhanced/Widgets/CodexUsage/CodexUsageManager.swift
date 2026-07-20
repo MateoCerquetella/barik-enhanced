@@ -116,6 +116,7 @@ final class CodexUsageManager: ObservableObject {
 
     private var refreshTimer: Timer?
     private var recoveryTask: Task<Void, Never>?
+    private var isFetching = false
     private var currentConfig: ConfigData = [:]
 
     private static let refreshInterval: TimeInterval = 60
@@ -195,12 +196,19 @@ final class CodexUsageManager: ObservableObject {
     }
 
     private func connectAndFetch() {
+        // Wake and session notifications can arrive in a burst.  Session scans
+        // are disk- and CPU-intensive, so allow only one to run at a time.
+        guard !isFetching else { return }
+        isFetching = true
         let planOverride = currentConfig["plan"]?.stringValue
 
-        Task {
+        Task { [weak self] in
             let loadState = await Task.detached(priority: .utility) {
                 Self.loadUsage(planOverride: planOverride)
             }.value
+
+            guard let self else { return }
+            self.isFetching = false
 
             switch loadState {
             case .disconnected:
@@ -334,7 +342,7 @@ final class CodexUsageManager: ObservableObject {
         var latestSnapshot: (bucket: CodexSessionEvent.Bucket, secondaryBucket: CodexSessionEvent.Bucket?, plan: String?, timestamp: Date)?
 
         for fileURL in recentSessionFiles(in: sessionsURL) {
-            guard let content = try? String(contentsOf: fileURL, encoding: .utf8) else {
+            guard let content = recentSessionContent(from: fileURL) else {
                 continue
             }
 
@@ -409,7 +417,7 @@ final class CodexUsageManager: ObservableObject {
         var latestActivity: Date?
 
         for fileURL in recentSessionFiles(in: sessionsURL) {
-            guard let content = try? String(contentsOf: fileURL, encoding: .utf8) else {
+            guard let content = recentSessionContent(from: fileURL) else {
                 continue
             }
 
@@ -454,8 +462,28 @@ final class CodexUsageManager: ObservableObject {
                 }
                 return lhsDate > rhsDate
             }
-            .prefix(100)
+            .prefix(20)
             .map { $0 }
+    }
+
+    /// Codex session transcripts can be tens of megabytes.  The events we need
+    /// are appended to JSONL files, so scanning a bounded tail avoids parsing
+    /// the entire history on every refresh.
+    nonisolated private static func recentSessionContent(from fileURL: URL) -> String? {
+        let maximumBytes = 512 * 1024
+        guard let handle = try? FileHandle(forReadingFrom: fileURL) else { return nil }
+        defer { try? handle.close() }
+
+        let fileSize = (try? handle.seekToEnd()) ?? 0
+        let offset = fileSize > UInt64(maximumBytes) ? fileSize - UInt64(maximumBytes) : 0
+        try? handle.seek(toOffset: offset)
+        guard var data = try? handle.readToEnd(), !data.isEmpty else { return nil }
+
+        // A tail may start halfway through a JSONL record; discard that record.
+        if offset > 0, let firstNewline = data.firstIndex(of: 0x0A) {
+            data.removeSubrange(...firstNewline)
+        }
+        return String(decoding: data, as: UTF8.self)
     }
 
     nonisolated private static func decodeEvent(from line: Substring) -> CodexSessionEvent? {
