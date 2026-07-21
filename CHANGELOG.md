@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.8
+
+### Bug Fixes
+- **Claude Usage widget: duplicate background requests**: Wake and session notifications are now coalesced into one usage fetch, preventing simultaneous API requests and retry delays.
+
 ## 1.3.7
 
 ### Bug Fixes

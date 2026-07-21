@@ -52,6 +52,7 @@ final class ClaudeUsageManager: ObservableObject {
 
     private var refreshTimer: Timer?
     private var recoveryTask: Task<Void, Never>?
+    private var isFetching = false
     private var cachedCredentials: Credentials?
     private var currentConfig: ConfigData = [:]
 
@@ -218,11 +219,17 @@ final class ClaudeUsageManager: ObservableObject {
 
     private func fetchData() {
         guard let creds = cachedCredentials else { return }
+        // Wake and session notifications can arrive together. Coalescing them
+        // avoids concurrent requests (and duplicate retry delays) to Claude.
+        guard !isFetching else { return }
+        isFetching = true
 
         let plan = currentConfig["plan"]?.stringValue ?? creds.plan
 
-        Task {
-            let result = await fetchUsageWithRetry(token: creds.accessToken)
+        Task { [weak self] in
+            guard let self else { return }
+            let result = await self.fetchUsageWithRetry(token: creds.accessToken)
+            self.isFetching = false
 
             switch result {
             case .success(let response):
