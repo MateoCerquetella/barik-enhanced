@@ -110,6 +110,9 @@ final class ConfigManager: ObservableObject {
             # calendar.allow-list = ["Home", "Personal"] # show only these calendars
             # calendar.deny-list = ["Work", "Boss"] # show all calendars except these
 
+            [widgets.default.meetings]
+            title-max-length = 32
+
             [widgets.default.cpuram]
             show-icon = false
             cpu-warning-level = 70

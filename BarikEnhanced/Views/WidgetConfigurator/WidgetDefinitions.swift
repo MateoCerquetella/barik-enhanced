@@ -19,6 +19,7 @@ let allWidgets: [WidgetDefinition] = [
     WidgetDefinition(id: "default.network", name: "Network", icon: "wifi", description: "WiFi/Ethernet status"),
     WidgetDefinition(id: "default.battery", name: "Battery", icon: "battery.75percent", description: "Battery level"),
     WidgetDefinition(id: "default.time", name: "Time", icon: "clock.fill", description: "Date and time"),
+    WidgetDefinition(id: "default.meetings", name: "Meetings", icon: "calendar.badge.clock", description: "Next meeting and one-click join"),
     WidgetDefinition(id: "default.dnd", name: "Do Not Disturb", icon: "moon.fill", description: "Focus mode toggle"),
     WidgetDefinition(id: "default.disk", name: "Disk Usage", icon: "internaldrive.fill", description: "Storage monitor"),
     WidgetDefinition(id: "default.uptime", name: "Uptime", icon: "clock.arrow.circlepath", description: "System uptime"),

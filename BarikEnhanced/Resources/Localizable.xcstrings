@@ -1,6 +1,66 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "All day" : {
+
+    },
+    "Allow Barik Enhanced to read Calendar in System Settings." : {
+
+    },
+    "Barik Enhanced needs Calendar access to find your meetings." : {
+
+    },
+    "Calendar access" : {
+
+    },
+    "Calendar access is off" : {
+
+    },
+    "Calendar access is restricted" : {
+
+    },
+    "Join" : {
+
+    },
+    "Loading meetings" : {
+
+    },
+    "Meetings" : {
+
+    },
+    "New calendar events will appear here automatically." : {
+
+    },
+    "No events today or tomorrow" : {
+
+    },
+    "No link" : {
+
+    },
+    "No meetings" : {
+
+    },
+    "Now" : {
+
+    },
+    "Open meeting schedule" : {
+
+    },
+    "Requesting calendar access" : {
+
+    },
+    "This Mac does not currently allow calendar access." : {
+
+    },
+    "Today" : {
+
+    },
+    "Tomorrow" : {
+
+    },
+    "Untitled event" : {
+
+    },
     "?%@?" : {
       "shouldTranslate" : false
     },

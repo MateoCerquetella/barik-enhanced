@@ -178,6 +178,10 @@ struct MenuBarView: View {
             TimeWidget(calendarManager: CalendarManager.shared)
                 .environmentObject(config)
 
+        case "default.meetings":
+            MeetingsWidget()
+                .environmentObject(config)
+
         case "default.nowplaying":
             NowPlayingWidget()
                 .environmentObject(config)

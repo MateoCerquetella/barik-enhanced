@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.0
+
+### New Features
+- **Meetings widget**: Add a standalone `default.meetings` widget powered by calendars already synchronized with macOS. It shows the active or next Google Meet, Zoom, or Microsoft Teams event, opens its validated meeting URL with one click, and provides a separate Today/Tomorrow schedule with safe empty, linkless, and calendar-permission states.
+
+### Privacy
+- Meeting titles, locations, notes, URLs, and schedule data are processed locally through EventKit and are not persisted or sent to a new service.
+
 ## 1.3.8
 
 ### Bug Fixes

@@ -1,6 +1,6 @@
 # Barik Enhanced
 
-[![Version](https://img.shields.io/badge/version-1.2.9-blue.svg)](https://github.com/MateoCerquetella/barik-enhanced/releases/tag/v1.2.9)
+[![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)](https://github.com/MateoCerquetella/barik-enhanced/releases/tag/v1.4.0)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![macOS](https://img.shields.io/badge/macOS-14.0%2B-black.svg)](https://github.com/MateoCerquetella/barik-enhanced)
 
@@ -30,6 +30,7 @@ Right-click the menu bar or click the gear icon to open the visual configurator.
 | **Battery** | Battery level with charging status |
 | **Network** | WiFi/Ethernet connection status |
 | **Time** | Date, time, and calendar popup |
+| **Meetings** | Current/next Meet, Zoom, or Teams call with one-click join |
 | **Claude Usage** | Claude API rate limit tracking with configurable alert thresholds |
 | **Codex Usage** | OpenAI Codex usage monitoring with configurable alert thresholds |
 | **Pomodoro** | Focus timer with work/break cycles |
@@ -97,6 +98,7 @@ displayed = [
     "default.microphone",
     "default.network",
     "default.battery",
+    "default.meetings",
     "default.time"
 ]
 
@@ -114,6 +116,9 @@ critical-level = 10
 format = "E d, J:mm"
 calendar.format = "J:mm"
 calendar.show-events = false
+
+[widgets.default.meetings]
+title-max-length = 32
 
 [widgets.default.cpuram]
 show-icon = false
@@ -142,7 +147,8 @@ pomodoros-before-long-break = 4
 default.spaces          default.nowplaying      default.weather
 default.cpuram          default.networkactivity  default.volume
 default.microphone      default.brightness      default.network
-default.battery         default.time            default.dnd
+default.battery         default.time            default.meetings
+default.dnd
 default.disk            default.uptime          default.pomodoro
 default.performance     default.keyboardlayout  default.claude-usage
 default.codex-usage     default.countdown       spacer

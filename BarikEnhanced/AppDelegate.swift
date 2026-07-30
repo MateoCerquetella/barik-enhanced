@@ -5,6 +5,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBarPanels: [NSPanel] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Hosted unit tests need the app process for @testable import, but must
+        // not create panels or trip the production single-instance guard.
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"]
+            != nil
+        {
+            return
+        }
+
         // Prevent multiple instances
         let runningApps = NSWorkspace.shared.runningApplications.filter {
             $0.bundleIdentifier == Bundle.main.bundleIdentifier
