@@ -50,7 +50,6 @@ final class MeetingsRenderingTests: XCTestCase {
                 authorizationState: .granted,
                 currentTime: now,
                 maximumTitleLength: 24,
-                onPrimaryAction: {},
                 onOpenSchedule: {})
                 .padding(14)
                 .foregroundStyle(.white)
@@ -63,7 +62,6 @@ final class MeetingsRenderingTests: XCTestCase {
                 authorizationState: .granted,
                 currentTime: now,
                 maximumTitleLength: 24,
-                onPrimaryAction: {},
                 onOpenSchedule: {})
                 .padding(14)
                 .foregroundStyle(.white)

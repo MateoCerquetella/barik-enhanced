@@ -21,11 +21,8 @@ struct MeetingsWidget: View {
     }
 
     private var maximumTitleLength: Int {
-        min(
-            max(
-                configProvider.config["title-max-length"]?.intValue ?? 32,
-                8),
-            80)
+        MeetingsWidgetSettings(config: configProvider.config)
+            .titleMaximumLength
     }
 
     var body: some View {
@@ -34,7 +31,6 @@ struct MeetingsWidget: View {
             authorizationState: manager.authorizationState,
             currentTime: currentTime,
             maximumTitleLength: maximumTitleLength,
-            onPrimaryAction: performPrimaryAction,
             onOpenSchedule: showSchedule)
             .foregroundStyle(.foregroundOutside)
             .shadow(color: .foregroundShadowOutside, radius: 3)
@@ -64,14 +60,6 @@ struct MeetingsWidget: View {
             }
     }
 
-    private func performPrimaryAction() {
-        guard let link = manager.selectedMeeting?.meetingLink else {
-            showSchedule()
-            return
-        }
-        joinCoordinator.join(link)
-    }
-
     private func showSchedule() {
         MenuBarPopup.show(
             rect: rect,
@@ -89,31 +77,15 @@ struct MeetingsWidgetContent: View {
     let authorizationState: MeetingsAuthorizationState
     let currentTime: Date
     let maximumTitleLength: Int
-    let onPrimaryAction: () -> Void
     let onOpenSchedule: () -> Void
 
     var body: some View {
-        HStack(spacing: 6) {
-            Button(action: onPrimaryAction) {
-                primaryLabel
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(primaryAccessibilityLabel)
-
-            Rectangle()
-                .fill(Color.foregroundOutside.opacity(0.25))
-                .frame(width: 1, height: 16)
-
-            Button(action: onOpenSchedule) {
-                Image(systemName: "calendar")
-                    .font(.system(size: 11, weight: .semibold))
-                    .frame(width: 16, height: 20)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Open meeting schedule")
-            .help("Open meeting schedule")
+        Button(action: onOpenSchedule) {
+            primaryLabel
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel(primaryAccessibilityLabel)
+        .help("Open meeting schedule")
         .font(.headline)
         .lineLimit(1)
         .fixedSize(horizontal: true, vertical: false)
@@ -136,7 +108,6 @@ struct MeetingsWidgetContent: View {
                     .monospacedDigit()
             }
             .contentShape(Rectangle())
-            .help("Join \(displayTitle(for: meeting))")
         } else {
             HStack(spacing: 6) {
                 Image(systemName: emptyStateSymbol)
@@ -145,13 +116,12 @@ struct MeetingsWidgetContent: View {
                     .fontWeight(.semibold)
             }
             .contentShape(Rectangle())
-            .help("Open meeting schedule")
         }
     }
 
     private var primaryAccessibilityLabel: String {
-        if let meeting, meeting.meetingLink != nil {
-            return "Join \(displayTitle(for: meeting)), \(statusText(for: meeting))"
+        if let meeting {
+            return "Open meeting schedule. \(displayTitle(for: meeting)), \(statusText(for: meeting))"
         }
         return "\(emptyStateTitle). Open meeting schedule"
     }
@@ -185,9 +155,8 @@ struct MeetingsWidgetContent: View {
     }
 
     private func truncatedTitle(for meeting: MeetingEvent) -> String {
-        let title = displayTitle(for: meeting)
-        guard title.count > maximumTitleLength else { return title }
-        return String(title.prefix(maximumTitleLength - 1)) + "…"
+        MeetingsWidgetSettings(titleMaximumLength: maximumTitleLength)
+            .truncatedTitle(displayTitle(for: meeting))
     }
 
     private func statusText(for meeting: MeetingEvent) -> String {
@@ -250,7 +219,6 @@ struct MeetingsWidgetContent_Previews: PreviewProvider {
                 authorizationState: .granted,
                 currentTime: Date(),
                 maximumTitleLength: 32,
-                onPrimaryAction: {},
                 onOpenSchedule: {})
                 .previewDisplayName("Upcoming meeting")
 
@@ -259,7 +227,6 @@ struct MeetingsWidgetContent_Previews: PreviewProvider {
                 authorizationState: .denied,
                 currentTime: Date(),
                 maximumTitleLength: 32,
-                onPrimaryAction: {},
                 onOpenSchedule: {})
                 .previewDisplayName("Permission denied")
         }

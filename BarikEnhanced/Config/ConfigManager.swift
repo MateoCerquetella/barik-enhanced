@@ -111,7 +111,11 @@ final class ConfigManager: ObservableObject {
             # calendar.deny-list = ["Work", "Boss"] # show all calendars except these
 
             [widgets.default.meetings]
-            title-max-length = 32
+            title-max-length = 32 # compact title characters (8-80)
+
+            [widgets.default.clipboard]
+            max-items = 10              # in-memory entries (1-20)
+            preview-max-length = 40     # compact preview characters (8-120)
 
             [widgets.default.cpuram]
             show-icon = false

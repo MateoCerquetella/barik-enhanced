@@ -19,6 +19,30 @@
     "Calendar access is restricted" : {
 
     },
+    "Clear" : {
+
+    },
+    "Clear clipboard history" : {
+
+    },
+    "Clear in-memory clipboard history" : {
+
+    },
+    "Clipboard" : {
+
+    },
+    "Clipboard empty" : {
+
+    },
+    "Clipboard history is empty" : {
+
+    },
+    "Copy text while this widget is visible to keep it here temporarily." : {
+
+    },
+    "Copy this entry" : {
+
+    },
     "Join" : {
 
     },
@@ -26,6 +50,9 @@
 
     },
     "Meetings" : {
+
+    },
+    "Memory-only history" : {
 
     },
     "New calendar events will appear here automatically." : {
@@ -44,6 +71,9 @@
 
     },
     "Open meeting schedule" : {
+
+    },
+    "Open clipboard history" : {
 
     },
     "Requesting calendar access" : {

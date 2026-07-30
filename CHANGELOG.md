@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.0 - 2026-07-30
+
+### New Features
+- **Clipboard widget**: Add `default.clipboard`, a bounded text history that exists only in memory while Barik Enhanced runs. Its compact preview and popup limits are configurable, and copied content is never persisted or transmitted.
+
+### Improvements
+- **Meetings widget**: Replace the split direct-join/calendar controls with one clean schedule-opening target. Join remains available from validated event rows in the full Today/Tomorrow popup.
+
 ## 1.4.0
 
 ### New Features

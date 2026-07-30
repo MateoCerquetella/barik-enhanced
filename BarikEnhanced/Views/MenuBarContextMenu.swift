@@ -7,6 +7,7 @@ final class MenuBarContextMenu: NSMenu, NSMenuDelegate {
         ("default.battery", "Battery"),
         ("default.time", "Time & Calendar"),
         ("default.meetings", "Meetings"),
+        ("default.clipboard", "Clipboard"),
         ("default.nowplaying", "Now Playing"),
         ("default.weather", "Weather"),
         ("default.cpuram", "CPU & RAM"),

@@ -1,6 +1,6 @@
 # Barik Enhanced
 
-[![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)](https://github.com/MateoCerquetella/barik-enhanced/releases/tag/v1.4.0)
+[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](https://github.com/MateoCerquetella/barik-enhanced/releases/tag/v1.5.0)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![macOS](https://img.shields.io/badge/macOS-14.0%2B-black.svg)](https://github.com/MateoCerquetella/barik-enhanced)
 
@@ -118,7 +118,11 @@ calendar.format = "J:mm"
 calendar.show-events = false
 
 [widgets.default.meetings]
-title-max-length = 32
+title-max-length = 32 # compact title characters (8-80)
+
+[widgets.default.clipboard]
+max-items = 10              # in-memory entries (1-20)
+preview-max-length = 40     # compact preview characters (8-120)
 
 [widgets.default.cpuram]
 show-icon = false
@@ -148,7 +152,7 @@ default.spaces          default.nowplaying      default.weather
 default.cpuram          default.networkactivity  default.volume
 default.microphone      default.brightness      default.network
 default.battery         default.time            default.meetings
-default.dnd
+default.clipboard       default.dnd
 default.disk            default.uptime          default.pomodoro
 default.performance     default.keyboardlayout  default.claude-usage
 default.codex-usage     default.countdown       spacer

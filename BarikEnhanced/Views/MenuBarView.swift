@@ -182,6 +182,10 @@ struct MenuBarView: View {
             MeetingsWidget()
                 .environmentObject(config)
 
+        case "default.clipboard":
+            ClipboardWidget()
+                .environmentObject(config)
+
         case "default.nowplaying":
             NowPlayingWidget()
                 .environmentObject(config)
