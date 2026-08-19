@@ -17,6 +17,7 @@ let allWidgets: [WidgetDefinition] = [
     WidgetDefinition(id: "default.weather", name: "Weather", icon: "cloud.sun.fill", description: "Temperature & forecast"),
     WidgetDefinition(id: "default.brightness", name: "Brightness", icon: "sun.max.fill", description: "Screen brightness"),
     WidgetDefinition(id: "default.network", name: "Network", icon: "wifi", description: "WiFi/Ethernet status"),
+    WidgetDefinition(id: "default.wireguard", name: "WireGuard", icon: "shield.lefthalf.filled", description: "Tunnel health and peer reachability probes"),
     WidgetDefinition(id: "default.battery", name: "Battery", icon: "battery.75percent", description: "Battery level"),
     WidgetDefinition(id: "default.time", name: "Time", icon: "clock.fill", description: "Date and time"),
     WidgetDefinition(id: "default.meetings", name: "Meetings", icon: "calendar.badge.clock", description: "Next meeting and full schedule"),

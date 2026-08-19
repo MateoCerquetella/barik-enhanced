@@ -62,7 +62,7 @@ struct MenuBarView: View {
 
         ZStack(alignment: .topLeading) {
             HStack(spacing: configManager.config.experimental.foreground.spacing) {
-                ForEach(leftItems) { item in
+                ForEach(leftItems, id: \.instanceID) { item in
                     draggableWidget(for: item)
                 }
             }
@@ -73,12 +73,12 @@ struct MenuBarView: View {
             HStack(spacing: configManager.config.experimental.foreground.spacing) {
                 Spacer(minLength: 0)
 
-                ForEach(rightItems) { item in
+                ForEach(rightItems, id: \.instanceID) { item in
                     draggableWidget(for: item)
                 }
 
                 if !timeItems.isEmpty {
-                    ForEach(timeItems) { item in
+                    ForEach(timeItems, id: \.instanceID) { item in
                         draggableWidget(for: item)
                             .fixedSize(horizontal: true, vertical: false)
                     }
@@ -170,6 +170,9 @@ struct MenuBarView: View {
 
         case "default.network":
             NetworkWidget().environmentObject(config)
+
+        case "default.wireguard":
+            WireGuardWidget().environmentObject(config)
 
         case "default.battery":
             BatteryWidget().environmentObject(config)

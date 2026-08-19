@@ -4,6 +4,7 @@ final class MenuBarContextMenu: NSMenu, NSMenuDelegate {
     static let widgetEntries: [(id: String, name: String)] = [
         ("default.spaces", "Spaces"),
         ("default.network", "Network"),
+        ("default.wireguard", "WireGuard"),
         ("default.battery", "Battery"),
         ("default.time", "Time & Calendar"),
         ("default.meetings", "Meetings"),
