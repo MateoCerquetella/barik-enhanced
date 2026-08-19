@@ -1,6 +1,6 @@
 # Barik Enhanced
 
-[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](https://github.com/MateoCerquetella/barik-enhanced/releases/tag/v1.5.0)
+[![Version](https://img.shields.io/badge/version-1.6.0-blue.svg)](https://github.com/MateoCerquetella/barik-enhanced/releases/tag/v1.6.0)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![macOS](https://img.shields.io/badge/macOS-14.0%2B-black.svg)](https://github.com/MateoCerquetella/barik-enhanced)
 
@@ -29,6 +29,7 @@ Right-click the menu bar or click the gear icon to open the visual configurator.
 | **Brightness** | Screen brightness control |
 | **Battery** | Battery level with charging status |
 | **Network** | WiFi/Ethernet connection status |
+| **WireGuard** | macOS tunnel state with gateway and peer ICMP probes |
 | **Time** | Date, time, and calendar popup |
 | **Meetings** | Current/next Meet, Zoom, or Teams call with one-click join |
 | **Claude Usage** | Claude API rate limit tracking with configurable alert thresholds |
@@ -97,6 +98,7 @@ displayed = [
     "default.volume",
     "default.microphone",
     "default.network",
+    "default.wireguard",
     "default.battery",
     "default.meetings",
     "default.time"
@@ -123,6 +125,13 @@ title-max-length = 32 # compact title characters (8-80)
 [widgets.default.clipboard]
 max-items = 10              # in-memory entries (1-20)
 preview-max-length = 40     # compact preview characters (8-120)
+
+[widgets.default.wireguard]
+# Replace these documentation-only TEST-NET addresses with your VPN IPs.
+tunnel-name = "Example WireGuard"
+gateway = "192.0.2.1"
+refresh-interval = 30 # seconds (clamped to 10-600)
+peers = ["Example Router=198.51.100.10", "Example Node=203.0.113.20"]
 
 [widgets.default.cpuram]
 show-icon = false
@@ -151,13 +160,17 @@ pomodoros-before-long-break = 4
 default.spaces          default.nowplaying      default.weather
 default.cpuram          default.networkactivity  default.volume
 default.microphone      default.brightness      default.network
-default.battery         default.time            default.meetings
-default.clipboard       default.dnd
+default.wireguard       default.battery         default.time
+default.meetings        default.clipboard       default.dnd
 default.disk            default.uptime          default.pomodoro
 default.performance     default.keyboardlayout  default.claude-usage
 default.codex-usage     default.countdown       spacer
 divider
 ```
+
+The WireGuard widget reads the configured macOS tunnel state and runs lightweight
+ICMP reachability probes for the gateway and listed peers. Probe results are
+diagnostic only; they are not authoritative WireGuard or RouterOS handshake data.
 
 ## Performance
 

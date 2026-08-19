@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.6.0 - 2026-08-19
+
+### New Features
+- **WireGuard widget**: Add `default.wireguard` with native macOS tunnel-state detection, a compact health indicator, and a detailed gateway/peer reachability popup.
+- **Safe health checks**: Run bounded ICMP probes off the main thread, prevent overlapping refreshes, and clearly distinguish reachability from authoritative WireGuard handshakes.
+
+### Bug Fixes
+- **Duplicate widget layout IDs**: Give repeated widgets such as dividers stable per-instance identities so SwiftUI no longer reports duplicate-ID layout faults.
+
 ## 1.5.0 - 2026-07-30
 
 ### New Features

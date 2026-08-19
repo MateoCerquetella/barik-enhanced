@@ -127,6 +127,13 @@ final class ConfigManager: ObservableObject {
             [widgets.default.networkactivity]
             # No specific configuration options yet
 
+            [widgets.default.wireguard]
+            # Replace these documentation-only TEST-NET addresses with your VPN IPs.
+            tunnel-name = "Example WireGuard"
+            gateway = "192.0.2.1"
+            refresh-interval = 30 # seconds (clamped to 10-600)
+            peers = ["Example Router=198.51.100.10", "Example Node=203.0.113.20"]
+
             [widgets.default.performance]
             # Performance mode widget - replaces volume widget
             # Controls energy consumption by adjusting update intervals
