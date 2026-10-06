@@ -117,6 +117,16 @@ struct SyncthingWidgetSettings: Equatable {
 }
 
 struct SyncthingSnapshot: Equatable {
+    struct Peer: Equatable, Identifiable {
+        let id: String
+        let name: String
+        let connected: Bool
+        let state: SyncthingState
+        let completion: Double
+        let needBytes: Int64
+        let needItems: Int
+    }
+
     let settings: SyncthingWidgetSettings?
     let state: SyncthingState
     let folderState: String?
@@ -130,6 +140,7 @@ struct SyncthingSnapshot: Equatable {
     let peerDeviceID: String?
     let errorMessage: String?
     let checkedAt: Date?
+    let peers: [Peer]
 
     static let initial = SyncthingSnapshot(
         settings: nil,
@@ -144,10 +155,19 @@ struct SyncthingSnapshot: Equatable {
         heapMemoryBytes: 0,
         peerDeviceID: nil,
         errorMessage: nil,
-        checkedAt: nil)
+        checkedAt: nil,
+        peers: [])
 
     var syncedBytes: Int64 {
         max(0, globalBytes - needBytes)
+    }
+
+    var worstPeer: Peer? {
+        peers.min { lhs, rhs in
+            if lhs.state == .unavailable { return true }
+            if rhs.state == .unavailable { return false }
+            return lhs.completion < rhs.completion
+        }
     }
 
     static func resolvedState(

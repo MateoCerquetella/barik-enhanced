@@ -32,7 +32,11 @@ struct SyncthingPopupContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
             header
-            progressSection
+            if isCurrent, !snapshot.peers.isEmpty {
+                peerSections
+            } else {
+                progressSection
+            }
             detailPanel
             if let error = isCurrent ? snapshot.errorMessage : nil {
                 notice(error, icon: "exclamationmark.triangle")
@@ -62,7 +66,7 @@ struct SyncthingPopupContent: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text("Syncthing")
                     .font(.system(size: 14, weight: .semibold))
-                Text("\(settings.localName) ↔ \(settings.peerName)")
+                Text("\(settings.localName) ↔ \(snapshot.peers.count) machines")
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
@@ -155,6 +159,38 @@ struct SyncthingPopupContent: View {
                 .stroke(.white.opacity(0.08), lineWidth: 1)
         }
         .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    private var peerSections: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(snapshot.peers) { peer in
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(peer.name)
+                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        Spacer()
+                        Text("\(Int(peer.completion))%")
+                            .font(.system(size: 12, weight: .bold, design: .monospaced))
+                            .foregroundStyle(SyncthingPalette.color(for: peer.state))
+                    }
+                    GeometryReader { geometry in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(.white.opacity(0.15))
+                            Capsule().fill(SyncthingPalette.color(for: peer.state))
+                                .frame(width: geometry.size.width * max(0, min(peer.completion / 100, 1)))
+                        }
+                    }
+                    .frame(height: 6)
+                    HStack {
+                        Text(peer.state.displayName)
+                        Spacer()
+                        Text(peer.needBytes > 0 ? "\(displayedBytes(peer.needBytes)) remaining" : "Up to date")
+                    }
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                }
+            }
+        }
     }
 
     private func detailRow(

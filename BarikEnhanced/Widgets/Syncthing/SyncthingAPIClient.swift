@@ -38,12 +38,8 @@ final class SyncthingAPIClient: SyncthingSnapshotFetching {
             let connections: Connections = try get(
                 "rest/system/connections", settings: settings)
 
-            let peerID = resolvePeerID(devices: devices, settings: settings)
-            let peerConnected = peerID.flatMap {
-                connections.connections[$0]?.connected
-            } ?? false
-
-            guard let peerID else {
+            let peers = devices.filter { $0.deviceID != localDeviceID(devices: devices, settings: settings) }
+            guard !peers.isEmpty else {
                 return SyncthingSnapshot(
                     settings: settings,
                     state: .unavailable,
@@ -59,44 +55,57 @@ final class SyncthingAPIClient: SyncthingSnapshotFetching {
                     heapMemoryBytes: status.alloc,
                     peerDeviceID: nil,
                     errorMessage:
-                        "Peer \"\(settings.peerName)\" was not found in Syncthing.",
-                    checkedAt: now())
+                        "No remote devices were found in Syncthing.",
+                    checkedAt: now(),
+                    peers: [])
             }
-
-            let completion: Completion = try get(
-                "rest/db/completion",
-                query: [
-                    URLQueryItem(name: "folder", value: settings.folderID),
-                    URLQueryItem(name: "device", value: peerID),
-                ],
-                settings: settings)
-            let percentage = min(
-                max(completion.completion, 0),
-                100)
-            let state = SyncthingSnapshot.resolvedState(
-                folderState: folder.state,
-                peerConnected: peerConnected,
-                completion: percentage)
+            let peerSnapshots = peers.map { device -> SyncthingSnapshot.Peer in
+                let connected = connections.connections[device.deviceID]?.connected ?? false
+                guard let completion = try? get(
+                    "rest/db/completion",
+                    query: [
+                        URLQueryItem(name: "folder", value: settings.folderID),
+                        URLQueryItem(name: "device", value: device.deviceID),
+                    ],
+                    settings: settings) as Completion? else {
+                    return .init(id: device.deviceID, name: device.name, connected: connected,
+                                 state: .unavailable, completion: 0, needBytes: 0, needItems: 0)
+                }
+                let percentage = min(max(completion.completion, 0), 100)
+                return .init(id: device.deviceID, name: device.name, connected: connected,
+                             state: SyncthingSnapshot.resolvedState(folderState: folder.state,
+                                                                      peerConnected: connected,
+                                                                      completion: percentage),
+                             completion: percentage, needBytes: completion.needBytes,
+                             needItems: completion.needItems)
+            }
+            let worst = peerSnapshots.min { $0.completion < $1.completion }!
+            let state = worst.state
 
             return SyncthingSnapshot(
                 settings: settings,
                 state: state,
                 folderState: folder.state,
-                peerConnected: peerConnected,
-                completion: percentage,
+                peerConnected: peerSnapshots.allSatisfy(\.connected),
+                completion: worst.completion,
                 globalBytes: folder.globalBytes,
-                needBytes: completion.needBytes,
-                needItems: completion.needItems,
+                needBytes: peerSnapshots.map(\.needBytes).max() ?? 0,
+                needItems: peerSnapshots.map(\.needItems).max() ?? 0,
                 processMemoryBytes: status.sys,
                 heapMemoryBytes: status.alloc,
-                peerDeviceID: peerID,
+                peerDeviceID: worst.id,
                 errorMessage: nil,
-                checkedAt: now())
+                checkedAt: now(),
+                peers: peerSnapshots)
         } catch {
             return failure(
                 settings: settings,
                 message: userFacingMessage(for: error))
         }
+    }
+
+    private func localDeviceID(devices: [Device], settings: SyncthingWidgetSettings) -> String? {
+        devices.first { $0.name.caseInsensitiveCompare(settings.localName) == .orderedSame }?.deviceID
     }
 
     private func resolvePeerID(
@@ -184,7 +193,8 @@ final class SyncthingAPIClient: SyncthingSnapshotFetching {
             heapMemoryBytes: 0,
             peerDeviceID: nil,
             errorMessage: message,
-            checkedAt: now())
+            checkedAt: now(),
+            peers: [])
     }
 
     private func userFacingMessage(for error: Error) -> String {
