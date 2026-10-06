@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.0 - 2026-10-05
+
+### New Features
+- **Syncthing widget**: Add `default.syncthing` with folder and peer sync state, completion progress, remaining bytes/items, connection status, and Syncthing process memory metrics from the local REST API.
+
 ## 1.6.0 - 2026-08-19
 
 ### New Features

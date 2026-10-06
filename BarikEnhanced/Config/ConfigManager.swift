@@ -134,6 +134,15 @@ final class ConfigManager: ObservableObject {
             refresh-interval = 30 # seconds (clamped to 10-600)
             peers = ["Example Router=198.51.100.10", "Example Node=203.0.113.20"]
 
+            [widgets.default.syncthing]
+            api-url = "http://127.0.0.1:8384"
+            api-key = "" # Syncthing Settings > GUI > API Key
+            folder-id = "developer"
+            local-name = "Saturn"
+            peer-name = "Jupiter"
+            # peer-device-id = "" # optional; use when peer-name is ambiguous
+            refresh-interval = 15 # seconds (clamped to 5-600)
+
             [widgets.default.performance]
             # Performance mode widget - replaces volume widget
             # Controls energy consumption by adjusting update intervals

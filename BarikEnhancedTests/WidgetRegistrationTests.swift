@@ -30,6 +30,41 @@ final class WidgetRegistrationTests: XCTestCase {
             })
     }
 
+    func testSyncthingIsRegisteredInBothSelectionSurfaces() {
+        XCTAssertEqual(
+            allWidgets.filter { $0.id == "default.syncthing" }.count,
+            1)
+        XCTAssertTrue(
+            MenuBarContextMenu.widgetEntries.contains {
+                $0.id == "default.syncthing" && $0.name == "Syncthing"
+            })
+    }
+
+    func testSyncthingDispatcherAndDocumentedConfigArePresent() throws {
+        let repositoryRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let menuBarSource = try String(
+            contentsOf: repositoryRoot.appendingPathComponent(
+                "BarikEnhanced/Views/MenuBarView.swift"),
+            encoding: .utf8)
+        let configSource = try String(
+            contentsOf: repositoryRoot.appendingPathComponent(
+                "BarikEnhanced/Config/ConfigManager.swift"),
+            encoding: .utf8)
+        let readme = try String(
+            contentsOf: repositoryRoot.appendingPathComponent("README.md"),
+            encoding: .utf8)
+
+        XCTAssertTrue(menuBarSource.contains("case \"default.syncthing\":"))
+        for documentation in [configSource, readme] {
+            XCTAssertTrue(
+                documentation.contains("[widgets.default.syncthing]"))
+            XCTAssertTrue(documentation.contains("folder-id = \"developer\""))
+            XCTAssertTrue(documentation.contains("peer-name = \"Jupiter\""))
+        }
+    }
+
     func testClipboardDispatcherAndDocumentedConfigArePresent() throws {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

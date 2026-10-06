@@ -1,6 +1,6 @@
 # Barik Enhanced
 
-[![Version](https://img.shields.io/badge/version-1.6.0-blue.svg)](https://github.com/MateoCerquetella/barik-enhanced/releases/tag/v1.6.0)
+[![Version](https://img.shields.io/badge/version-1.7.0-blue.svg)](https://github.com/MateoCerquetella/barik-enhanced/releases/tag/v1.7.0)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![macOS](https://img.shields.io/badge/macOS-14.0%2B-black.svg)](https://github.com/MateoCerquetella/barik-enhanced)
 
@@ -30,6 +30,7 @@ Right-click the menu bar or click the gear icon to open the visual configurator.
 | **Battery** | Battery level with charging status |
 | **Network** | WiFi/Ethernet connection status |
 | **WireGuard** | macOS tunnel state with gateway and peer ICMP probes |
+| **Syncthing** | Folder sync state, transfer progress, and process RAM |
 | **Time** | Date, time, and calendar popup |
 | **Meetings** | Current/next Meet, Zoom, or Teams call with one-click join |
 | **Claude Usage** | Claude API rate limit tracking with configurable alert thresholds |
@@ -99,6 +100,7 @@ displayed = [
     "default.microphone",
     "default.network",
     "default.wireguard",
+    "default.syncthing",
     "default.battery",
     "default.meetings",
     "default.time"
@@ -133,6 +135,15 @@ gateway = "192.0.2.1"
 refresh-interval = 30 # seconds (clamped to 10-600)
 peers = ["Example Router=198.51.100.10", "Example Node=203.0.113.20"]
 
+[widgets.default.syncthing]
+api-url = "http://127.0.0.1:8384"
+api-key = "" # Syncthing Settings > GUI > API Key
+folder-id = "developer"
+local-name = "Saturn"
+peer-name = "Jupiter"
+# peer-device-id = "" # optional; use when peer-name is ambiguous
+refresh-interval = 15
+
 [widgets.default.cpuram]
 show-icon = false
 cpu-warning-level = 70
@@ -160,7 +171,8 @@ pomodoros-before-long-break = 4
 default.spaces          default.nowplaying      default.weather
 default.cpuram          default.networkactivity  default.volume
 default.microphone      default.brightness      default.network
-default.wireguard       default.battery         default.time
+default.wireguard       default.syncthing       default.battery
+default.time
 default.meetings        default.clipboard       default.dnd
 default.disk            default.uptime          default.pomodoro
 default.performance     default.keyboardlayout  default.claude-usage
@@ -171,6 +183,12 @@ divider
 The WireGuard widget reads the configured macOS tunnel state and runs lightweight
 ICMP reachability probes for the gateway and listed peers. Probe results are
 diagnostic only; they are not authoritative WireGuard or RouterOS handshake data.
+
+The Syncthing widget reads the configured node's REST API. It shows the selected
+folder's completion against the named peer and the queried Syncthing process's
+reported RAM. Keep the API bound to localhost and use a secure tunnel when Barik
+runs on another machine. Protect the config file because it contains the API
+key. A peer's RAM requires querying that peer's own API.
 
 ## Performance
 

@@ -5,6 +5,7 @@ final class MenuBarContextMenu: NSMenu, NSMenuDelegate {
         ("default.spaces", "Spaces"),
         ("default.network", "Network"),
         ("default.wireguard", "WireGuard"),
+        ("default.syncthing", "Syncthing"),
         ("default.battery", "Battery"),
         ("default.time", "Time & Calendar"),
         ("default.meetings", "Meetings"),

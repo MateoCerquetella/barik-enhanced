@@ -174,6 +174,9 @@ struct MenuBarView: View {
         case "default.wireguard":
             WireGuardWidget().environmentObject(config)
 
+        case "default.syncthing":
+            SyncthingWidget().environmentObject(config)
+
         case "default.battery":
             BatteryWidget().environmentObject(config)
 
