@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.8.3 - 2026-10-06
+
+### Bug Fixes
+- **Syncthing peer list**: Exclude the local device from configured folder peers so it is not shown a second time as an offline remote machine.
+
 ## 1.8.2 - 2026-10-06
 
 ### Improvements

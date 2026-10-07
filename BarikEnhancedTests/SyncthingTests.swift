@@ -106,4 +106,58 @@ final class SyncthingTests: XCTestCase {
             SyncthingSnapshot.leastSyncedPeer(in: peers)?.id,
             "jupiter")
     }
+
+    func testFolderDeviceListDoesNotDuplicateLocalDevice() {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [SyncthingTestURLProtocol.self]
+        let client = SyncthingAPIClient(
+            session: URLSession(configuration: configuration))
+        let settings = SyncthingWidgetSettings(
+            apiURL: URL(string: "http://127.0.0.1:8384")!,
+            apiKey: "test")
+
+        let snapshot = client.fetch(settings: settings)
+
+        XCTAssertNil(snapshot.errorMessage)
+        XCTAssertEqual(snapshot.peers.map(\.name), ["Saturn", "jupiter"])
+        XCTAssertEqual(snapshot.peers.count, 2)
+        XCTAssertTrue(snapshot.peerConnected)
+        XCTAssertEqual(snapshot.state, .synced)
+    }
+}
+
+private final class SyncthingTestURLProtocol: URLProtocol {
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest {
+        request
+    }
+
+    override func startLoading() {
+        let response: String
+        switch request.url?.path {
+        case "/rest/system/status":
+            response = #"{"myID":"LOCAL","alloc":8500000,"sys":26400000}"#
+        case "/rest/db/status":
+            response = #"{"state":"idle","globalBytes":100,"needBytes":0,"needFiles":0,"needDirectories":0,"needDeletes":0}"#
+        case "/rest/config/devices":
+            response = #"[{"deviceID":"LOCAL","name":"saturn"},{"deviceID":"REMOTE","name":"jupiter"}]"#
+        case "/rest/config/folders/developer":
+            response = #"{"devices":[{"deviceID":"LOCAL"},{"deviceID":"REMOTE"}]}"#
+        case "/rest/system/connections":
+            response = #"{"connections":{"REMOTE":{"connected":true}}}"#
+        case "/rest/db/completion":
+            response = #"{"completion":100,"needBytes":0,"needItems":0}"#
+        default:
+            client?.urlProtocol(self, didFailWithError: URLError(.badURL))
+            return
+        }
+        let httpResponse = HTTPURLResponse(
+            url: request.url!, statusCode: 200, httpVersion: nil,
+            headerFields: ["Content-Type": "application/json"])!
+        client?.urlProtocol(self, didReceive: httpResponse, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: Data(response.utf8))
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
 }

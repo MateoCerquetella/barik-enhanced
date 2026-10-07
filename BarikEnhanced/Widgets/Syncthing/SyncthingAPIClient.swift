@@ -44,7 +44,7 @@ final class SyncthingAPIClient: SyncthingSnapshotFetching {
             let devicesByID = Dictionary(
                 uniqueKeysWithValues: devices.map { ($0.deviceID, $0) })
             let configuredPeers = folderConfig.devices.compactMap {
-                devicesByID[$0.deviceID]
+                $0.deviceID == status.myID ? nil : devicesByID[$0.deviceID]
             }
             let localCompletion = SyncthingSnapshot.localCompletion(
                 globalBytes: folder.globalBytes,
@@ -215,16 +215,19 @@ private extension SyncthingAPIClient {
     struct SystemStatus: Decodable {
         let alloc: Int64
         let sys: Int64
+        let myID: String
 
         enum CodingKeys: String, CodingKey {
             case alloc
             case sys
+            case myID
         }
 
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             alloc = try container.decodeIfPresent(Int64.self, forKey: .alloc) ?? 0
             sys = try container.decodeIfPresent(Int64.self, forKey: .sys) ?? 0
+            myID = try container.decode(String.self, forKey: .myID)
         }
     }
 
