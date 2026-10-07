@@ -163,10 +163,37 @@ struct SyncthingSnapshot: Equatable {
     }
 
     var worstPeer: Peer? {
+        Self.leastSyncedPeer(in: peers)
+    }
+
+    static func localCompletion(
+        globalBytes: Int64,
+        needBytes: Int64
+    ) -> Double {
+        guard globalBytes > 0 else { return needBytes == 0 ? 100 : 0 }
+        let completed = Double(max(0, globalBytes - needBytes))
+        return min(max(completed / Double(globalBytes) * 100, 0), 100)
+    }
+
+    static func leastSyncedPeer(in peers: [Peer]) -> Peer? {
         peers.min { lhs, rhs in
-            if lhs.state == .unavailable { return true }
-            if rhs.state == .unavailable { return false }
+            let lhsPriority = statePriority(lhs.state)
+            let rhsPriority = statePriority(rhs.state)
+            if lhsPriority != rhsPriority {
+                return lhsPriority < rhsPriority
+            }
             return lhs.completion < rhs.completion
+        }
+    }
+
+    private static func statePriority(_ state: SyncthingState) -> Int {
+        switch state {
+        case .unavailable: return 0
+        case .disconnected: return 1
+        case .syncing: return 2
+        case .scanning: return 3
+        case .checking: return 4
+        case .synced: return 5
         }
     }
 

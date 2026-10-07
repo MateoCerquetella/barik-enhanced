@@ -68,4 +68,42 @@ final class SyncthingTests: XCTestCase {
                 completion: 100),
             .disconnected)
     }
+
+    func testLocalCompletionUsesFolderDatabaseTotals() {
+        XCTAssertEqual(
+            SyncthingSnapshot.localCompletion(
+                globalBytes: 1_000,
+                needBytes: 250),
+            75)
+        XCTAssertEqual(
+            SyncthingSnapshot.localCompletion(
+                globalBytes: 0,
+                needBytes: 0),
+            100)
+    }
+
+    func testDisconnectedMachineWinsOverallStatus() {
+        let peers = [
+            SyncthingSnapshot.Peer(
+                id: "local",
+                name: "Saturn",
+                connected: true,
+                state: .syncing,
+                completion: 80,
+                needBytes: 20,
+                needItems: 1),
+            SyncthingSnapshot.Peer(
+                id: "jupiter",
+                name: "Jupiter",
+                connected: false,
+                state: .disconnected,
+                completion: 100,
+                needBytes: 0,
+                needItems: 0),
+        ]
+
+        XCTAssertEqual(
+            SyncthingSnapshot.leastSyncedPeer(in: peers)?.id,
+            "jupiter")
+    }
 }

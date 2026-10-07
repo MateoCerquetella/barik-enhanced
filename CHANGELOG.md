@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.8.2 - 2026-10-06
+
+### Improvements
+- **Multi-machine Syncthing status**: Show the local machine and every device assigned to the selected folder, each with its own sync percentage, progress bar, connection state, remaining data, and pending items.
+- **Accurate overall status**: Surface offline or unavailable machines in the compact widget instead of hiding them behind a completed peer.
+
+### Bug Fixes
+- **Updater version loop**: Advance the embedded app version and stop the update control from remaining busy when download or installation setup fails.
+
 ## 1.7.0 - 2026-10-05
 
 ### New Features

@@ -35,31 +35,36 @@ final class SyncthingAPIClient: SyncthingSnapshotFetching {
                 settings: settings)
             let devices: [Device] = try get(
                 "rest/config/devices", settings: settings)
+            let folderConfig: FolderConfiguration = try get(
+                "rest/config/folders/\(settings.folderID)",
+                settings: settings)
             let connections: Connections = try get(
                 "rest/system/connections", settings: settings)
 
-            let peers = devices.filter { $0.deviceID != localDeviceID(devices: devices, settings: settings) }
-            guard !peers.isEmpty else {
-                return SyncthingSnapshot(
-                    settings: settings,
-                    state: .unavailable,
-                    folderState: folder.state,
-                    peerConnected: false,
-                    completion: 0,
-                    globalBytes: folder.globalBytes,
-                    needBytes: folder.needBytes,
-                    needItems: folder.needFiles
-                        + folder.needDirectories
-                        + folder.needDeletes,
-                    processMemoryBytes: status.sys,
-                    heapMemoryBytes: status.alloc,
-                    peerDeviceID: nil,
-                    errorMessage:
-                        "No remote devices were found in Syncthing.",
-                    checkedAt: now(),
-                    peers: [])
+            let devicesByID = Dictionary(
+                uniqueKeysWithValues: devices.map { ($0.deviceID, $0) })
+            let configuredPeers = folderConfig.devices.compactMap {
+                devicesByID[$0.deviceID]
             }
-            let peerSnapshots = peers.map { device -> SyncthingSnapshot.Peer in
+            let localCompletion = SyncthingSnapshot.localCompletion(
+                globalBytes: folder.globalBytes,
+                needBytes: folder.needBytes)
+            let localItems = folder.needFiles
+                + folder.needDirectories
+                + folder.needDeletes
+            let localPeer = SyncthingSnapshot.Peer(
+                id: "local",
+                name: settings.localName,
+                connected: true,
+                state: SyncthingSnapshot.resolvedState(
+                    folderState: folder.state,
+                    peerConnected: true,
+                    completion: localCompletion),
+                completion: localCompletion,
+                needBytes: folder.needBytes,
+                needItems: localItems)
+            let remotePeers = configuredPeers.map {
+                device -> SyncthingSnapshot.Peer in
                 let connected = connections.connections[device.deviceID]?.connected ?? false
                 guard let completion = try? get(
                     "rest/db/completion",
@@ -79,14 +84,15 @@ final class SyncthingAPIClient: SyncthingSnapshotFetching {
                              completion: percentage, needBytes: completion.needBytes,
                              needItems: completion.needItems)
             }
-            let worst = peerSnapshots.min { $0.completion < $1.completion }!
+            let peerSnapshots = [localPeer] + remotePeers
+            let worst = SyncthingSnapshot.leastSyncedPeer(in: peerSnapshots)!
             let state = worst.state
 
             return SyncthingSnapshot(
                 settings: settings,
                 state: state,
                 folderState: folder.state,
-                peerConnected: peerSnapshots.allSatisfy(\.connected),
+                peerConnected: remotePeers.allSatisfy(\.connected),
                 completion: worst.completion,
                 globalBytes: folder.globalBytes,
                 needBytes: peerSnapshots.map(\.needBytes).max() ?? 0,
@@ -102,22 +108,6 @@ final class SyncthingAPIClient: SyncthingSnapshotFetching {
                 settings: settings,
                 message: userFacingMessage(for: error))
         }
-    }
-
-    private func localDeviceID(devices: [Device], settings: SyncthingWidgetSettings) -> String? {
-        devices.first { $0.name.caseInsensitiveCompare(settings.localName) == .orderedSame }?.deviceID
-    }
-
-    private func resolvePeerID(
-        devices: [Device],
-        settings: SyncthingWidgetSettings
-    ) -> String? {
-        if let peerDeviceID = settings.peerDeviceID {
-            return peerDeviceID
-        }
-        return devices.first {
-            $0.name.caseInsensitiveCompare(settings.peerName) == .orderedSame
-        }?.deviceID
     }
 
     private func get<Response: Decodable>(
@@ -250,6 +240,14 @@ private extension SyncthingAPIClient {
     struct Device: Decodable {
         let deviceID: String
         let name: String
+    }
+
+    struct FolderConfiguration: Decodable {
+        let devices: [FolderDevice]
+    }
+
+    struct FolderDevice: Decodable {
+        let deviceID: String
     }
 
     struct Connections: Decodable {

@@ -134,9 +134,9 @@ struct SyncthingPopupContent: View {
                 trailing: snapshot.folderState?.uppercased() ?? "UNKNOWN")
             Divider().overlay(.white.opacity(0.08))
             detailRow(
-                label: "PEER",
-                value: settings.peerName,
-                trailing: snapshot.peerConnected ? "CONNECTED" : "OFFLINE")
+                label: "HOSTS",
+                value: "\(snapshot.peers.count) machines",
+                trailing: snapshot.peerConnected ? "ONLINE" : "CHECK PEERS")
             Divider().overlay(.white.opacity(0.08))
             detailRow(
                 label: "ITEMS",
