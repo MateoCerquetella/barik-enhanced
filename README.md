@@ -1,6 +1,6 @@
 # Barik Enhanced
 
-[![Version](https://img.shields.io/badge/version-1.8.3-blue.svg)](https://github.com/MateoCerquetella/barik-enhanced/releases/tag/v1.8.3)
+[![Version](https://img.shields.io/badge/version-1.8.4-blue.svg)](https://github.com/MateoCerquetella/barik-enhanced/releases/tag/v1.8.4)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![macOS](https://img.shields.io/badge/macOS-14.0%2B-black.svg)](https://github.com/MateoCerquetella/barik-enhanced)
 

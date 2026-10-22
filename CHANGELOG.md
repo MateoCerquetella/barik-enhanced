@@ -1,12 +1,12 @@
 # Changelog
 
-## Unreleased
+## 1.8.4 - 2026-10-21
 
 ### New Features
 - **Live NET I/O**: The network activity widget samples at 1 Hz and draws a live upload/download trace in neon green/cyan, with a pulse only while traffic is flowing. Its popup keeps a rolling history, so the charts are full as soon as it opens.
 - **Top consumers**: The System Monitor popup lists the top CPU and RAM processes and can send SIGTERM with a two-step ✕ → KILL? confirmation. The list refreshes only while the popup is open.
 - **Live system popup**: Opening the popup refreshes CPU, RAM and network immediately and keeps CPU/RAM on the same 1 Hz cadence while it stays open.
-- **Blur Background in the cog menu**: Toggle the upstream full-screen blurred background (wallpaper behind the whole bar and desktop) without editing the TOML.
+- **Blur Background in the cog menu**: Toggle the full-screen blurred wallpaper from the cog. The blur is now a real Gaussian blur of the wallpaper instead of a Material tint, so it no longer washes the screen gray.
 
 ### Bug Fixes
 - **Syncthing stuck on SYNCING**: `/rest/db/completion` reports `remoteState` (`paused`, `notSharing`, `valid`, `unknown`). A peer that paused the folder was treated as "syncing" forever because completion stayed below 100%. The widget now shows PAUSED (or the real state) and the popup explains it, with a RETRY button.
@@ -14,8 +14,8 @@
 - **Popup history**: CPU, RAM and network charts no longer start at zero and take 90 seconds to fill; only one sample per second is kept in the manager.
 - **Syncthing click target**: The compact widget uses a tap gesture instead of a Button inside the drag source, so a quick click opens the popup.
 - **Background panel collapsed to 0×0**: The disabled background hosting view has no intrinsic size, which collapsed the panel and made the blur impossible to enable later. It now lives in a fixed container.
+- **Config rewrites**: Table headers with a trailing comment no longer get duplicated, which previously produced invalid TOML and blocked the next launch.
 - **AeroSpace CLI**: Timed-out commands are killed with SIGKILL and repeated failures pause spawning for a minute, so a wedged AeroSpace cannot leave hung CLI processes behind.
-- **Background blur**: Blur the actual wallpaper with a real Gaussian blur instead of a tinted `Material`; the gray wash was the material, not the image.
 
 ## 1.8.3 - 2026-10-06
 
