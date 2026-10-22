@@ -188,9 +188,9 @@ divider
 The WireGuard widget reads every configured macOS tunnel state, follows the first
 connected profile, and can connect or disconnect profiles from its popup. It runs
 lightweight ICMP reachability probes only for the connected profile's gateway and
-peers. Probe results are diagnostic only; they are not authoritative WireGuard or
-RouterOS handshake data. Existing configurations without `profiles` continue to
-operate as one legacy profile.
+peers. Probe results are diagnostic only; they are
+not authoritative WireGuard or RouterOS handshake data. Existing configurations
+without `profiles` continue to operate as one legacy profile.
 
 The Syncthing widget reads the configured node's REST API. It shows the selected
 folder's completion against the named peer and the queried Syncthing process's
