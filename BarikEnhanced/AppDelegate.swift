@@ -164,10 +164,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         newPanel.hasShadow = false
         newPanel.isReleasedWhenClosed = false
         newPanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+        // Host the SwiftUI view inside a plain container: an NSHostingView with
+        // empty content (the disabled background) reports a zero fitting size
+        // and collapses the panel, hiding the background after it is enabled.
+        let container = NSView(frame: NSRect(origin: .zero, size: frame.size))
         let hostingView = FirstMouseHostingView(rootView: hostingRootView)
+        hostingView.frame = container.bounds
+        hostingView.autoresizingMask = [.width, .height]
         hostingView.wantsLayer = true
         hostingView.layer?.isOpaque = false
-        newPanel.contentView = hostingView
+        container.addSubview(hostingView)
+        newPanel.contentView = container
+        newPanel.setFrame(frame, display: true)
         newPanel.orderFront(nil)
         return newPanel
     }

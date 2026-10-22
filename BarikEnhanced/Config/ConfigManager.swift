@@ -232,7 +232,7 @@ final class ConfigManager: ObservableObject {
         }
     }
 
-    private func updatedTOMLString(
+    func updatedTOMLString(
         original: String,
         key: String,
         newValue: String,

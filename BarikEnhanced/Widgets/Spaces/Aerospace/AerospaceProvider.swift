@@ -1,9 +1,36 @@
+import Darwin
 import Foundation
 
 class AerospaceSpacesProvider: SpacesProvider, SwitchableSpacesProvider {
     typealias SpaceType = AeroSpace
     private var executablePath: String { ConfigManager.shared.config.aerospace.path }
     private let commandTimeout: DispatchTimeInterval = .seconds(2)
+
+    /// A wedged AeroSpace server accepts the CLI connection but never answers.
+    /// Without a circuit breaker the 5 s refresh spawned a new hung process
+    /// every cycle. Three failures pause CLI calls for a minute.
+    private var consecutiveFailures = 0
+    private var pausedUntil: Date?
+
+    private func commandCircuitIsOpen() -> Bool {
+        if let pausedUntil, pausedUntil > Date() {
+            return true
+        }
+        return false
+    }
+
+    private func recordFailure() {
+        consecutiveFailures += 1
+        if consecutiveFailures >= 3 {
+            pausedUntil = Date().addingTimeInterval(60)
+            consecutiveFailures = 0
+        }
+    }
+
+    private func recordSuccess() {
+        consecutiveFailures = 0
+        pausedUntil = nil
+    }
 
     func getSpacesWithWindows() -> [AeroSpace]? {
         guard
@@ -58,6 +85,8 @@ class AerospaceSpacesProvider: SpacesProvider, SwitchableSpacesProvider {
     }
 
     private func runAerospaceCommand(arguments: [String]) -> Data? {
+        guard !commandCircuitIsOpen() else { return nil }
+
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executablePath)
         process.arguments = arguments
@@ -80,7 +109,10 @@ class AerospaceSpacesProvider: SpacesProvider, SwitchableSpacesProvider {
         }
 
         if exitGroup.wait(timeout: .now() + commandTimeout) == .timedOut {
-            process.terminate()
+            // SIGTERM is not enough for a CLI blocked on a dead socket.
+            kill(process.processIdentifier, SIGKILL)
+            _ = exitGroup.wait(timeout: .now() + 1)
+            recordFailure()
             print("Aerospace command timed out: \(arguments.joined(separator: " "))")
             return nil
         }
@@ -89,10 +121,12 @@ class AerospaceSpacesProvider: SpacesProvider, SwitchableSpacesProvider {
         let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
         guard process.terminationStatus == 0 else {
             let stderr = String(data: errorData, encoding: .utf8) ?? ""
+            recordFailure()
             print("Aerospace command failed (\(process.terminationStatus)): \(stderr)")
             return nil
         }
 
+        recordSuccess()
         return data
     }
 
