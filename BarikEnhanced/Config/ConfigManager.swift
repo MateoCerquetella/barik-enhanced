@@ -258,12 +258,17 @@ final class ConfigManager: ObservableObject {
 
             for line in lines {
                 let trimmed = line.trimmingCharacters(in: .whitespaces)
-                if trimmed.hasPrefix("[") && trimmed.hasSuffix("]") {
+                // Headers can carry an inline comment (`[table] # note`).
+                let header = trimmed
+                    .split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false)
+                    .first
+                    .map { $0.trimmingCharacters(in: .whitespaces) } ?? trimmed
+                if header.hasPrefix("[") && header.hasSuffix("]") {
                     if insideTargetTable && !updatedKey {
                         newLines.append("\(actualKey) = \(renderedValue)")
                         updatedKey = true
                     }
-                    if trimmed == tableHeader {
+                    if header == tableHeader {
                         foundTable = true
                         insideTargetTable = true
                     } else {

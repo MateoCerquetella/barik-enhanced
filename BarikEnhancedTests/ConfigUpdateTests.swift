@@ -27,6 +27,27 @@ final class ConfigUpdateTests: XCTestCase {
         XCTAssertEqual(blurLine?.trimmingCharacters(in: .whitespaces), "blur = 0")
     }
 
+    func testBackgroundToggleHandlesHeaderWithInlineComment() {
+        let original = """
+        [experimental.background] # settings for blurred background
+        displayed = true          # display blurred background
+        height = "default"
+        blur = 1
+        """
+
+        let updated = ConfigManager.shared.updatedTOMLString(
+            original: original,
+            key: "experimental.background.displayed",
+            newValue: "false",
+            wrapInQuotes: false)
+
+        XCTAssertEqual(
+            updated.components(separatedBy: "[experimental.background]").count - 1,
+            1,
+            "must not append a duplicate table")
+        XCTAssertTrue(updated.contains("displayed = false"))
+    }
+
     func testBackgroundToggleAppendsMissingTable() {
         let updated = ConfigManager.shared.updatedTOMLString(
             original: "theme = \"system\"\n",
