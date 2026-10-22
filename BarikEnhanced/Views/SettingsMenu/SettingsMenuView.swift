@@ -21,11 +21,11 @@ struct SettingsMenuView: View {
                     newValue: backgroundBlurEnabled ? "false" : "true",
                     wrapInQuotes: false)
                 if !backgroundBlurEnabled {
-                    // blur = 0 means ultra thin; 3 is the regular material
-                    // the app used before the setting was turned off.
+                    // 1 is the ultra-thin material: a full-screen frosting that
+                    // still shows the wallpaper instead of a flat gray wash.
                     configManager.updateConfigValue(
                         key: "experimental.background.blur",
-                        newValue: "3",
+                        newValue: "1",
                         wrapInQuotes: false)
                 }
             }
