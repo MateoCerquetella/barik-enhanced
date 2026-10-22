@@ -2,7 +2,6 @@ import SwiftUI
 
 struct BackgroundView: View {
     @ObservedObject var configManager = ConfigManager.shared
-    @ObservedObject var menuBarMetrics = MenuBarMetrics.shared
 
     private func menuBarBlurView(_ geometry: GeometryProxy) -> some View {
         let theme: ColorScheme? = {
@@ -16,7 +15,9 @@ struct BackgroundView: View {
         let menuBarHeight =
             (configManager.config.experimental.foreground.resolveHeight() ?? 32) - 6
         let isBottom = configManager.config.experimental.position == .bottom
-        let trailingPad = max(CGFloat(6), menuBarMetrics.systemStatusAreaWidth - 6)
+        // Cover every widget, including the right-aligned group that sits over
+        // the macOS status area.
+        let trailingPad = CGFloat(6)
 
         return VStack(spacing: 0) {
             if !isBottom {
