@@ -124,15 +124,62 @@ final class SyncthingTests: XCTestCase {
         XCTAssertTrue(snapshot.peerConnected)
         XCTAssertEqual(snapshot.state, .synced)
     }
+
+    func testPausedPeerDoesNotReportSyncing() {
+        SyncthingTestURLProtocol.remoteState = "paused"
+        defer { SyncthingTestURLProtocol.remoteState = "valid" }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [SyncthingTestURLProtocol.self]
+        let client = SyncthingAPIClient(
+            session: URLSession(configuration: configuration))
+        let settings = SyncthingWidgetSettings(
+            apiURL: URL(string: "http://127.0.0.1:8384")!,
+            apiKey: "test")
+
+        let snapshot = client.fetch(settings: settings)
+
+        let peer = snapshot.peers.first { $0.id == "REMOTE" }
+        XCTAssertEqual(peer?.state, .paused)
+        XCTAssertEqual(snapshot.state, .paused)
+        XCTAssertEqual(snapshot.peers.first { $0.id == "local" }?.state, .synced)
+    }
+
+    func testPausedFolderDoesNotQueryPeerCompletion() {
+        SyncthingTestURLProtocol.folderPaused = true
+        defer { SyncthingTestURLProtocol.folderPaused = false }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [SyncthingTestURLProtocol.self]
+        let client = SyncthingAPIClient(
+            session: URLSession(configuration: configuration))
+        let settings = SyncthingWidgetSettings(
+            apiURL: URL(string: "http://127.0.0.1:8384")!,
+            apiKey: "test")
+
+        let snapshot = client.fetch(settings: settings)
+
+        XCTAssertEqual(snapshot.state, .paused)
+        XCTAssertEqual(snapshot.folderState, "paused")
+        XCTAssertTrue(snapshot.errorMessage?.contains("Resume it") == true)
+        XCTAssertTrue(snapshot.peers.isEmpty)
+    }
 }
 
 private final class SyncthingTestURLProtocol: URLProtocol {
+    static var folderPaused = false
+    static var remoteState = "valid"
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest {
         request
     }
 
     override func startLoading() {
+        if Self.folderPaused,
+           request.url?.path != "/rest/system/status",
+           request.url?.path != "/rest/config/folders/developer" {
+            XCTFail("Paused folders must not query progress: \(request.url!.path)")
+            client?.urlProtocol(self, didFailWithError: URLError(.badServerResponse))
+            return
+        }
         let response: String
         switch request.url?.path {
         case "/rest/system/status":
@@ -142,11 +189,15 @@ private final class SyncthingTestURLProtocol: URLProtocol {
         case "/rest/config/devices":
             response = #"[{"deviceID":"LOCAL","name":"saturn"},{"deviceID":"REMOTE","name":"jupiter"}]"#
         case "/rest/config/folders/developer":
-            response = #"{"devices":[{"deviceID":"LOCAL"},{"deviceID":"REMOTE"}]}"#
+            response = Self.folderPaused
+                ? #"{"paused":true,"devices":[{"deviceID":"LOCAL"},{"deviceID":"REMOTE"}]}"#
+                : #"{"paused":false,"devices":[{"deviceID":"LOCAL"},{"deviceID":"REMOTE"}]}"#
         case "/rest/system/connections":
             response = #"{"connections":{"REMOTE":{"connected":true}}}"#
         case "/rest/db/completion":
-            response = #"{"completion":100,"needBytes":0,"needItems":0}"#
+            response = Self.remoteState == "paused"
+                ? #"{"completion":97.76,"needBytes":1050866299,"needItems":39562,"remoteState":"paused"}"#
+                : #"{"completion":100,"needBytes":0,"needItems":0,"remoteState":"valid"}"#
         default:
             client?.urlProtocol(self, didFailWithError: URLError(.badURL))
             return

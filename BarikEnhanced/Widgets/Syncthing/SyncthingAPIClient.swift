@@ -29,15 +29,32 @@ final class SyncthingAPIClient: SyncthingSnapshotFetching {
         do {
             let status: SystemStatus = try get(
                 "rest/system/status", settings: settings)
+            let folderConfig: FolderConfiguration = try get(
+                "rest/config/folders/\(settings.folderID)",
+                settings: settings)
+            if folderConfig.paused {
+                return SyncthingSnapshot(
+                    settings: settings,
+                    state: .paused,
+                    folderState: "paused",
+                    peerConnected: false,
+                    completion: 0,
+                    globalBytes: 0,
+                    needBytes: 0,
+                    needItems: 0,
+                    processMemoryBytes: status.sys,
+                    heapMemoryBytes: status.alloc,
+                    peerDeviceID: nil,
+                    errorMessage: "The \(settings.folderID) folder is paused on \(settings.localName). Resume it in Syncthing to continue syncing.",
+                    checkedAt: now(),
+                    peers: [])
+            }
             let folder: FolderStatus = try get(
                 "rest/db/status",
                 query: [URLQueryItem(name: "folder", value: settings.folderID)],
                 settings: settings)
             let devices: [Device] = try get(
                 "rest/config/devices", settings: settings)
-            let folderConfig: FolderConfiguration = try get(
-                "rest/config/folders/\(settings.folderID)",
-                settings: settings)
             let connections: Connections = try get(
                 "rest/system/connections", settings: settings)
 
@@ -78,9 +95,11 @@ final class SyncthingAPIClient: SyncthingSnapshotFetching {
                 }
                 let percentage = min(max(completion.completion, 0), 100)
                 return .init(id: device.deviceID, name: device.name, connected: connected,
-                             state: SyncthingSnapshot.resolvedState(folderState: folder.state,
-                                                                      peerConnected: connected,
-                                                                      completion: percentage),
+                             state: SyncthingSnapshot.resolvedPeerState(
+                                 folderState: folder.state,
+                                 remoteState: completion.remoteState,
+                                 peerConnected: connected,
+                                 completion: percentage),
                              completion: percentage, needBytes: completion.needBytes,
                              needItems: completion.needItems)
             }
@@ -246,6 +265,7 @@ private extension SyncthingAPIClient {
     }
 
     struct FolderConfiguration: Decodable {
+        let paused: Bool
         let devices: [FolderDevice]
     }
 
@@ -265,11 +285,13 @@ private extension SyncthingAPIClient {
         let completion: Double
         let needBytes: Int64
         let needItems: Int
+        let remoteState: String?
 
         enum CodingKeys: String, CodingKey {
             case completion
             case needBytes
             case needItems
+            case remoteState
         }
 
         init(from decoder: Decoder) throws {
@@ -279,6 +301,8 @@ private extension SyncthingAPIClient {
                 Int64.self, forKey: .needBytes) ?? 0
             needItems = try container.decodeIfPresent(
                 Int.self, forKey: .needItems) ?? 0
+            remoteState = try container.decodeIfPresent(
+                String.self, forKey: .remoteState)
         }
     }
 }

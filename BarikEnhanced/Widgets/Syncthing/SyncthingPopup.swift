@@ -29,6 +29,12 @@ struct SyncthingPopupContent: View {
         isCurrent ? snapshot.completion / 100 : 0
     }
 
+    /// True only when the local folder itself is paused. A paused remote peer
+    /// still has hosts and item counts to show.
+    private var isLocallyPaused: Bool {
+        isCurrent && snapshot.folderState == "paused" && snapshot.peers.isEmpty
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
             header
@@ -39,7 +45,12 @@ struct SyncthingPopupContent: View {
             }
             detailPanel
             if let error = isCurrent ? snapshot.errorMessage : nil {
-                notice(error, icon: "exclamationmark.triangle")
+                notice(error, icon: "exclamationmark.triangle", retryable: true)
+            } else if state == .paused {
+                notice(
+                    "A machine has this folder paused. It resumes automatically when that machine unpauses it.",
+                    icon: "pause.circle",
+                    retryable: true)
             } else {
                 notice(
                     "RAM is reported by \(settings.localName)'s Syncthing process. Query the other machine's API to see its RAM.",
@@ -66,7 +77,9 @@ struct SyncthingPopupContent: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text("Syncthing")
                     .font(.system(size: 14, weight: .semibold))
-                Text("\(settings.localName) ↔ \(snapshot.peers.count) machines")
+                Text(isLocallyPaused
+                     ? "\(settings.localName) / \(settings.folderID)"
+                     : "\(settings.localName) ↔ \(snapshot.peers.count) machines")
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
@@ -99,7 +112,7 @@ struct SyncthingPopupContent: View {
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(SyncthingPalette.color(for: state))
                 Spacer()
-                Text("\(Int(progress * 100))%")
+                Text(isLocallyPaused ? "-" : "\(Int(progress * 100))%")
                     .font(.system(size: 20, weight: .semibold, design: .monospaced))
             }
 
@@ -117,9 +130,9 @@ struct SyncthingPopupContent: View {
             .frame(height: 7)
 
             HStack {
-                Text("\(displayedBytes(snapshot.syncedBytes)) synced")
+                Text(isLocallyPaused ? "Sync paused" : "\(displayedBytes(snapshot.syncedBytes)) synced")
                 Spacer()
-                Text("\(displayedBytes(snapshot.needBytes)) remaining")
+                Text(isLocallyPaused ? "Progress unavailable" : "\(displayedBytes(snapshot.needBytes)) remaining")
             }
             .font(.system(size: 10, design: .monospaced))
             .foregroundStyle(.secondary)
@@ -132,16 +145,18 @@ struct SyncthingPopupContent: View {
                 label: "FOLDER",
                 value: settings.folderID,
                 trailing: snapshot.folderState?.uppercased() ?? "UNKNOWN")
-            Divider().overlay(.white.opacity(0.08))
-            detailRow(
-                label: "HOSTS",
-                value: "\(snapshot.peers.count) machines",
-                trailing: snapshot.peerConnected ? "ONLINE" : "CHECK PEERS")
+            if !isLocallyPaused {
+                Divider().overlay(.white.opacity(0.08))
+                detailRow(
+                    label: "HOSTS",
+                    value: "\(snapshot.peers.count) machines",
+                    trailing: snapshot.peerConnected ? "ONLINE" : "CHECK PEERS")
+            }
             Divider().overlay(.white.opacity(0.08))
             detailRow(
                 label: "ITEMS",
                 value: "Pending changes",
-                trailing: "\(snapshot.needItems)")
+                trailing: isLocallyPaused ? "-" : "\(snapshot.needItems)")
             Divider().overlay(.white.opacity(0.08))
             detailRow(
                 label: "RAM",
@@ -215,7 +230,11 @@ struct SyncthingPopupContent: View {
         .padding(.vertical, 9)
     }
 
-    private func notice(_ text: String, icon: String) -> some View {
+    private func notice(
+        _ text: String,
+        icon: String,
+        retryable: Bool = false
+    ) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: icon)
                 .font(.system(size: 10, weight: .semibold))
@@ -225,6 +244,20 @@ struct SyncthingPopupContent: View {
                 .font(.system(size: 10))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+            if retryable {
+                Spacer(minLength: 6)
+                Button(action: onRefresh) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "arrow.clockwise")
+                        Text("RETRY")
+                    }
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(SyncthingPalette.color(for: state))
+                .disabled(isRefreshing)
+                .help("Check Syncthing again now")
+            }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)

@@ -5,6 +5,7 @@ enum SyncthingState: Equatable {
     case syncing
     case scanning
     case disconnected
+    case paused
     case unavailable
     case checking
 
@@ -14,6 +15,7 @@ enum SyncthingState: Equatable {
         case .syncing: return "Syncing"
         case .scanning: return "Scanning"
         case .disconnected: return "Peer Offline"
+        case .paused: return "Paused"
         case .unavailable: return "Unavailable"
         case .checking: return "Checking"
         }
@@ -25,6 +27,7 @@ enum SyncthingState: Equatable {
         case .syncing: return "SYNCING"
         case .scanning: return "SCAN"
         case .disconnected: return "OFFLINE"
+        case .paused: return "PAUSED"
         case .unavailable: return "ERROR"
         case .checking: return "CHECK"
         }
@@ -189,12 +192,37 @@ struct SyncthingSnapshot: Equatable {
     private static func statePriority(_ state: SyncthingState) -> Int {
         switch state {
         case .unavailable: return 0
+        case .paused: return 0
         case .disconnected: return 1
         case .syncing: return 2
         case .scanning: return 3
         case .checking: return 4
         case .synced: return 5
         }
+    }
+
+    /// Resolves a peer's state from `/rest/db/completion`.
+    ///
+    /// `remoteState` only reports whether the peer shares the folder and whether
+    /// it has it paused. It never says "syncing", so without this the local
+    /// folder state plus a completion below 100% makes a paused peer look like
+    /// it is syncing forever.
+    static func resolvedPeerState(
+        folderState: String,
+        remoteState: String?,
+        peerConnected: Bool,
+        completion: Double
+    ) -> SyncthingState {
+        guard peerConnected else { return .disconnected }
+        switch remoteState?.lowercased() {
+        case "paused": return .paused
+        case "notsharing": return .unavailable
+        default: break
+        }
+        return resolvedState(
+            folderState: folderState,
+            peerConnected: true,
+            completion: completion)
     }
 
     static func resolvedState(

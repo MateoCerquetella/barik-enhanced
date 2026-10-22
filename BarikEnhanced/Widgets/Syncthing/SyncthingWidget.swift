@@ -7,6 +7,7 @@ enum SyncthingPalette {
         case .syncing: return .blue
         case .scanning: return .yellow
         case .disconnected: return .orange
+        case .paused: return .yellow
         case .unavailable: return .red
         case .checking: return .gray
         }
@@ -80,47 +81,48 @@ struct SyncthingWidgetContent: View {
     let onOpenDetails: () -> Void
 
     var body: some View {
-        Button(action: onOpenDetails) {
-            HStack(spacing: 6) {
-                Image(systemName: "arrow.triangle.2.circlepath")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(SyncthingPalette.color(for: state))
+        HStack(spacing: 6) {
+            Image(systemName: "arrow.triangle.2.circlepath")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(SyncthingPalette.color(for: state))
 
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 4) {
-                        Text(state.compactLabel)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 4) {
+                    Text(state.compactLabel)
+                        .font(.system(
+                            size: 8,
+                            weight: .bold,
+                            design: .monospaced))
+                    if state == .syncing || state == .scanning {
+                        Text("\(Int(progress * 100))%")
                             .font(.system(
                                 size: 8,
-                                weight: .bold,
+                                weight: .medium,
                                 design: .monospaced))
-                        if state == .syncing || state == .scanning {
-                            Text("\(Int(progress * 100))%")
-                                .font(.system(
-                                    size: 8,
-                                    weight: .medium,
-                                    design: .monospaced))
-                        }
                     }
-                    .foregroundStyle(SyncthingPalette.color(for: state))
-
-                    GeometryReader { geometry in
-                        ZStack(alignment: .leading) {
-                            Capsule().fill(.white.opacity(0.2))
-                            Capsule()
-                                .fill(SyncthingPalette.color(for: state))
-                                .frame(
-                                    width: geometry.size.width
-                                        * max(0, min(progress, 1)))
-                        }
-                    }
-                    .frame(width: 48, height: 3)
                 }
+                .foregroundStyle(SyncthingPalette.color(for: state))
+
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(.white.opacity(0.2))
+                        Capsule()
+                            .fill(SyncthingPalette.color(for: state))
+                            .frame(
+                                width: geometry.size.width
+                                    * max(0, min(progress, 1)))
+                    }
+                }
+                .frame(width: 48, height: 3)
             }
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onOpenDetails)
+        .accessibilityAddTraits(.isButton)
         .accessibilityLabel(
-            "Syncthing \(state.displayName), \(Int(progress * 100)) percent")
+            state == .paused
+                ? "Syncthing Paused"
+                : "Syncthing \(state.displayName), \(Int(progress * 100)) percent")
         .help("Syncthing: \(state.displayName)")
         .fixedSize(horizontal: true, vertical: false)
     }
