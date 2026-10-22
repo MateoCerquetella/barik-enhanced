@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.8.6 - 2026-10-22
+
+### New Features
+- **Multiple WireGuard profiles**: Configure several named tunnels in one widget, automatically follow the first connected profile, and switch tunnels from the popup without editing TOML.
+- **Per-profile health**: The compact label and popup follow the active profile, while gateway and peer probes run only for a connected tunnel.
+
+### Compatibility
+- **Legacy WireGuard configuration**: Existing `tunnel-name`, `gateway`, `refresh-interval`, and `peers` settings continue to behave as a single synthesized profile.
+
 ## 1.8.5 - 2026-10-22
 
 ### Improvements

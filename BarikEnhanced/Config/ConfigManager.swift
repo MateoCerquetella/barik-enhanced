@@ -128,11 +128,16 @@ final class ConfigManager: ObservableObject {
             # No specific configuration options yet
 
             [widgets.default.wireguard]
-            # Replace these documentation-only TEST-NET addresses with your VPN IPs.
+            # Legacy single-profile form. Replace these TEST-NET values with your VPN details.
             tunnel-name = "Example WireGuard"
             gateway = "192.0.2.1"
             refresh-interval = 30 # seconds (clamped to 10-600)
             peers = ["Example Router=198.51.100.10", "Example Node=203.0.113.20"]
+            # Optional multi-profile form. When present, the connected profile is selected automatically.
+            profiles = [
+              { name = "Primary", tunnel-name = "Example Primary", gateway = "192.0.2.1", peers = ["Router=198.51.100.10"] },
+              { name = "Backup", tunnel-name = "Example Backup", gateway = "203.0.113.1", peers = ["Phone=203.0.113.20"] },
+            ]
 
             [widgets.default.syncthing]
             api-url = "http://127.0.0.1:8384"

@@ -1,6 +1,6 @@
 # Barik Enhanced
 
-[![Version](https://img.shields.io/badge/version-1.8.5-blue.svg)](https://github.com/MateoCerquetella/barik-enhanced/releases/tag/v1.8.5)
+[![Version](https://img.shields.io/badge/version-1.8.6-blue.svg)](https://github.com/MateoCerquetella/barik-enhanced/releases/tag/v1.8.6)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![macOS](https://img.shields.io/badge/macOS-14.0%2B-black.svg)](https://github.com/MateoCerquetella/barik-enhanced)
 
@@ -129,11 +129,16 @@ max-items = 10              # in-memory entries (1-20)
 preview-max-length = 40     # compact preview characters (8-120)
 
 [widgets.default.wireguard]
-# Replace these documentation-only TEST-NET addresses with your VPN IPs.
+# Legacy single-profile form. Replace these TEST-NET values with your VPN details.
 tunnel-name = "Example WireGuard"
 gateway = "192.0.2.1"
 refresh-interval = 30 # seconds (clamped to 10-600)
 peers = ["Example Router=198.51.100.10", "Example Node=203.0.113.20"]
+# Optional multi-profile form. When present, the connected profile is selected automatically.
+profiles = [
+  { name = "Primary", tunnel-name = "Example Primary", gateway = "192.0.2.1", peers = ["Router=198.51.100.10"] },
+  { name = "Backup", tunnel-name = "Example Backup", gateway = "203.0.113.1", peers = ["Phone=203.0.113.20"] },
+]
 
 [widgets.default.syncthing]
 api-url = "http://127.0.0.1:8384"
@@ -180,9 +185,12 @@ default.codex-usage     default.countdown       spacer
 divider
 ```
 
-The WireGuard widget reads the configured macOS tunnel state and runs lightweight
-ICMP reachability probes for the gateway and listed peers. Probe results are
-diagnostic only; they are not authoritative WireGuard or RouterOS handshake data.
+The WireGuard widget reads every configured macOS tunnel state, follows the first
+connected profile, and can connect or disconnect profiles from its popup. It runs
+lightweight ICMP reachability probes only for the connected profile's gateway and
+peers. Probe results are diagnostic only; they are not authoritative WireGuard or
+RouterOS handshake data. Existing configurations without `profiles` continue to
+operate as one legacy profile.
 
 The Syncthing widget reads the configured node's REST API. It shows the selected
 folder's completion against the named peer and the queried Syncthing process's

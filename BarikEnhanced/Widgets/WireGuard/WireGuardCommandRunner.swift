@@ -245,7 +245,37 @@ final class SystemWireGuardReachabilityProbe:
 }
 
 protocol WireGuardHealthChecking {
-    func check(settings: WireGuardWidgetSettings) -> WireGuardSnapshot
+    func check(
+        settings: WireGuardWidgetSettings,
+        preferredProfile: WireGuardProfile?
+    ) -> WireGuardSnapshot
+}
+
+protocol WireGuardTunnelControlling {
+    func setConnected(
+        _ connected: Bool,
+        tunnelName: String
+    ) -> WireGuardCommandResult?
+}
+
+final class SystemWireGuardTunnelController: WireGuardTunnelControlling {
+    private let commandRunner: any WireGuardCommandRunning
+
+    init(
+        commandRunner: any WireGuardCommandRunning =
+            ProcessWireGuardCommandRunner()
+    ) {
+        self.commandRunner = commandRunner
+    }
+
+    func setConnected(
+        _ connected: Bool,
+        tunnelName: String
+    ) -> WireGuardCommandResult? {
+        commandRunner.run(
+            executable: "/usr/sbin/scutil",
+            arguments: ["--nc", connected ? "start" : "stop", tunnelName])
+    }
 }
 
 final class WireGuardHealthChecker: WireGuardHealthChecking {
@@ -265,34 +295,47 @@ final class WireGuardHealthChecker: WireGuardHealthChecking {
         self.now = now
     }
 
-    func check(settings: WireGuardWidgetSettings) -> WireGuardSnapshot {
-        let tunnelState = tunnelStatusProvider.status(
-            forTunnelNamed: settings.tunnelName)
+    func check(
+        settings: WireGuardWidgetSettings,
+        preferredProfile: WireGuardProfile? = nil
+    ) -> WireGuardSnapshot {
+        let profileStates = settings.profiles.map { profile in
+            WireGuardProfileState(
+                profile: profile,
+                state: tunnelStatusProvider.status(
+                    forTunnelNamed: profile.tunnelName))
+        }
+        let selected = profileStates.first { $0.state == .connected }
+            ?? profileStates.first { $0.profile.id == preferredProfile?.id }
+            ?? profileStates[0]
+        let profile = selected.profile
 
-        guard tunnelState == .connected else {
+        guard selected.state == .connected else {
             return WireGuardSnapshot(
                 settings: settings,
-                tunnelState: tunnelState,
+                activeProfile: profile,
+                profileStates: profileStates,
                 gatewayProbe: .unknown,
-                peerProbes: settings.peers.map {
+                peerProbes: profile.peers.map {
                     WireGuardPeerProbe(peer: $0, state: .unknown)
                 },
                 checkedAt: now())
         }
 
         let gatewayProbe = reachabilityProbe.probe(
-            address: settings.gateway)
-        let peerProbes = settings.peers.map { peer in
+            address: profile.gateway)
+        let peerProbes = profile.peers.map { peer in
             WireGuardPeerProbe(
                 peer: peer,
-                state: peer.address == settings.gateway
+                state: peer.address == profile.gateway
                     ? gatewayProbe
                     : reachabilityProbe.probe(address: peer.address))
         }
 
         return WireGuardSnapshot(
             settings: settings,
-            tunnelState: tunnelState,
+            activeProfile: profile,
+            profileStates: profileStates,
             gatewayProbe: gatewayProbe,
             peerProbes: peerProbes,
             checkedAt: now())

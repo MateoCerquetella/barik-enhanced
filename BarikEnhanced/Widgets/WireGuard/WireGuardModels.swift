@@ -140,6 +140,58 @@ enum WireGuardIPAddress {
     }
 }
 
+struct WireGuardProfile: Identifiable, Equatable {
+    let name: String
+    let tunnelName: String
+    let gateway: String
+    let peers: [WireGuardPeer]
+
+    var id: String { tunnelName }
+
+    func compactLabel(status: WireGuardHealthStatus) -> String {
+        "\(name) \(status.compactLabel)"
+    }
+
+    static func parse(_ config: ConfigData) -> WireGuardProfile? {
+        guard
+            let name = nonemptyString(config["name"]),
+            let tunnelName = nonemptyString(config["tunnel-name"]),
+            let gateway = nonemptyString(config["gateway"]),
+            WireGuardIPAddress.isValid(gateway),
+            let peerValues = config["peers"]?.arrayValue,
+            peerValues.allSatisfy({
+                $0.stringValue.flatMap(WireGuardPeer.parse) != nil
+            })
+        else {
+            return nil
+        }
+
+        return WireGuardProfile(
+            name: name,
+            tunnelName: tunnelName,
+            gateway: gateway,
+            peers: parsedPeers(config["peers"]))
+    }
+
+    fileprivate static func nonemptyString(_ value: TOMLValue?) -> String? {
+        guard let string = value?.stringValue?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+            !string.isEmpty
+        else {
+            return nil
+        }
+        return string
+    }
+
+    fileprivate static func parsedPeers(_ value: TOMLValue?) -> [WireGuardPeer] {
+        var seenPeers: Set<String> = []
+        return (value?.arrayValue ?? [])
+            .compactMap(\.stringValue)
+            .compactMap(WireGuardPeer.parse)
+            .filter { seenPeers.insert($0.id).inserted }
+    }
+}
+
 struct WireGuardWidgetSettings: Equatable {
     static let defaultTunnelName = "Example WireGuard"
     static let defaultGateway = "192.0.2.1"
@@ -147,32 +199,41 @@ struct WireGuardWidgetSettings: Equatable {
     static let minimumRefreshInterval = 10
     static let maximumRefreshInterval = 600
 
-    let tunnelName: String
-    let gateway: String
+    let profiles: [WireGuardProfile]
     let refreshInterval: Int
-    let peers: [WireGuardPeer]
 
     init(config: ConfigData) {
-        let configuredTunnel = config["tunnel-name"]?.stringValue?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        tunnelName = configuredTunnel.flatMap { $0.isEmpty ? nil : $0 }
+        let tunnelName = WireGuardProfile.nonemptyString(config["tunnel-name"])
             ?? Self.defaultTunnelName
-
-        let configuredGateway = config["gateway"]?.stringValue?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        gateway = configuredGateway.flatMap {
+        let gateway = WireGuardProfile.nonemptyString(config["gateway"]).flatMap {
             WireGuardIPAddress.isValid($0) ? $0 : nil
         } ?? Self.defaultGateway
 
-        refreshInterval = Self.clampedRefreshInterval(
-            config["refresh-interval"]?.intValue
-                ?? Self.defaultRefreshInterval)
+        var seenTunnels: Set<String> = []
+        let configuredProfiles = (config["profiles"]?.arrayValue ?? [])
+            .compactMap(\.dictionaryValue)
+            .compactMap(WireGuardProfile.parse)
+            .filter { seenTunnels.insert($0.tunnelName).inserted }
 
-        var seenPeers: Set<String> = []
-        peers = (config["peers"]?.arrayValue ?? [])
-            .compactMap(\.stringValue)
-            .compactMap(WireGuardPeer.parse)
-            .filter { seenPeers.insert($0.id).inserted }
+        self.init(
+            profiles: configuredProfiles.isEmpty
+                ? [WireGuardProfile(
+                    name: tunnelName,
+                    tunnelName: tunnelName,
+                    gateway: gateway,
+                    peers: WireGuardProfile.parsedPeers(config["peers"]))]
+                : configuredProfiles,
+            refreshInterval: config["refresh-interval"]?.intValue
+                ?? Self.defaultRefreshInterval)
+    }
+
+    init(
+        profiles: [WireGuardProfile],
+        refreshInterval: Int = defaultRefreshInterval
+    ) {
+        precondition(!profiles.isEmpty)
+        self.profiles = profiles
+        self.refreshInterval = Self.clampedRefreshInterval(refreshInterval)
     }
 
     init(
@@ -181,10 +242,13 @@ struct WireGuardWidgetSettings: Equatable {
         refreshInterval: Int = defaultRefreshInterval,
         peers: [WireGuardPeer] = []
     ) {
-        self.tunnelName = tunnelName
-        self.gateway = gateway
-        self.refreshInterval = Self.clampedRefreshInterval(refreshInterval)
-        self.peers = peers
+        self.init(
+            profiles: [WireGuardProfile(
+                name: tunnelName,
+                tunnelName: tunnelName,
+                gateway: gateway,
+                peers: peers)],
+            refreshInterval: refreshInterval)
     }
 
     static func clampedRefreshInterval(_ value: Int) -> Int {
@@ -203,19 +267,33 @@ struct WireGuardPeerProbe: Identifiable, Equatable {
 
 struct WireGuardSnapshot: Equatable {
     let settings: WireGuardWidgetSettings?
-    let tunnelState: WireGuardTunnelState
+    let activeProfile: WireGuardProfile?
+    let profileStates: [WireGuardProfileState]
     let gatewayProbe: WireGuardProbeState
     let peerProbes: [WireGuardPeerProbe]
     let checkedAt: Date?
 
     static let initial = WireGuardSnapshot(
         settings: nil,
-        tunnelState: .unknown,
+        activeProfile: nil,
+        profileStates: [],
         gatewayProbe: .unknown,
         peerProbes: [],
         checkedAt: nil)
 
+    var tunnelState: WireGuardTunnelState {
+        profileStates.first { $0.profile.id == activeProfile?.id }?.state
+            ?? .unknown
+    }
+
     func peerProbe(for peer: WireGuardPeer) -> WireGuardProbeState {
         peerProbes.first(where: { $0.peer == peer })?.state ?? .unknown
     }
+}
+
+struct WireGuardProfileState: Identifiable, Equatable {
+    let profile: WireGuardProfile
+    let state: WireGuardTunnelState
+
+    var id: String { profile.id }
 }

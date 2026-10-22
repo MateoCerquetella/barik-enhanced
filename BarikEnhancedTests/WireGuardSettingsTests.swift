@@ -16,12 +16,14 @@ final class WireGuardSettingsTests: XCTestCase {
             ]),
         ])
 
-        XCTAssertEqual(settings.tunnelName, "Office Tunnel")
-        XCTAssertEqual(settings.gateway, "192.0.2.1")
+        XCTAssertEqual(settings.profiles.count, 1)
+        XCTAssertEqual(settings.profiles[0].name, "Office Tunnel")
+        XCTAssertEqual(settings.profiles[0].tunnelName, "Office Tunnel")
+        XCTAssertEqual(settings.profiles[0].gateway, "192.0.2.1")
         XCTAssertEqual(
             settings.refreshInterval,
             WireGuardWidgetSettings.minimumRefreshInterval)
-        XCTAssertEqual(settings.peers, [
+        XCTAssertEqual(settings.profiles[0].peers, [
             WireGuardPeer(name: "Router", address: "198.51.100.10"),
             WireGuardPeer(name: "Node", address: "2001:db8::20"),
         ])
@@ -35,15 +37,137 @@ final class WireGuardSettingsTests: XCTestCase {
         ])
 
         XCTAssertEqual(
-            settings.tunnelName,
+            settings.profiles[0].tunnelName,
             WireGuardWidgetSettings.defaultTunnelName)
         XCTAssertEqual(
-            settings.gateway,
+            settings.profiles[0].gateway,
             WireGuardWidgetSettings.defaultGateway)
         XCTAssertEqual(
             settings.refreshInterval,
             WireGuardWidgetSettings.maximumRefreshInterval)
-        XCTAssertTrue(settings.peers.isEmpty)
+        XCTAssertTrue(settings.profiles[0].peers.isEmpty)
+    }
+
+    func testLegacyConfigCreatesOneEquivalentProfile() {
+        let settings = WireGuardWidgetSettings(config: [
+            "tunnel-name": .string("Office Tunnel"),
+            "gateway": .string("192.0.2.1"),
+            "refresh-interval": .int(60),
+            "peers": .array([
+                .string("Router=192.0.2.1"),
+                .string("Node=198.51.100.10"),
+            ]),
+        ])
+
+        XCTAssertEqual(settings.profiles, [
+            WireGuardProfile(
+                name: "Office Tunnel",
+                tunnelName: "Office Tunnel",
+                gateway: "192.0.2.1",
+                peers: [
+                    WireGuardPeer(name: "Router", address: "192.0.2.1"),
+                    WireGuardPeer(name: "Node", address: "198.51.100.10"),
+                ])
+        ])
+        XCTAssertEqual(settings.refreshInterval, 60)
+    }
+
+    func testInlineProfilesParseInOrderAndReplaceLegacyValues() {
+        let settings = WireGuardWidgetSettings(config: [
+            "tunnel-name": .string("Legacy"),
+            "gateway": .string("203.0.113.1"),
+            "refresh-interval": .int(60),
+            "profiles": .array([
+                .dictionary([
+                    "name": .string("Office"),
+                    "tunnel-name": .string("office-tunnel"),
+                    "gateway": .string("192.0.2.1"),
+                    "peers": .array([.string("Node=192.0.2.2")]),
+                ]),
+                .dictionary([
+                    "name": .string("Backup"),
+                    "tunnel-name": .string("backup-tunnel"),
+                    "gateway": .string("198.51.100.1"),
+                    "peers": .array([.string("Phone=198.51.100.2")]),
+                ]),
+            ]),
+        ])
+
+        XCTAssertEqual(settings.profiles, [
+            WireGuardProfile(
+                name: "Office", tunnelName: "office-tunnel", gateway: "192.0.2.1",
+                peers: [WireGuardPeer(name: "Node", address: "192.0.2.2")]),
+            WireGuardProfile(
+                name: "Backup", tunnelName: "backup-tunnel", gateway: "198.51.100.1",
+                peers: [WireGuardPeer(name: "Phone", address: "198.51.100.2")]),
+        ])
+        XCTAssertEqual(settings.refreshInterval, 60)
+    }
+
+    func testProfilesTrimValidateAndDeduplicateTunnelNames() {
+        let valid: ConfigData = [
+            "name": .string(" Office "),
+            "tunnel-name": .string(" office-tunnel "),
+            "gateway": .string(" 192.0.2.1 "),
+            "peers": .array([
+                .string(" Node = 192.0.2.2 "),
+                .string("Node=192.0.2.2"),
+            ]),
+        ]
+        var duplicate = valid
+        duplicate["name"] = .string("Duplicate")
+        var invalid = valid
+        invalid["gateway"] = .string("not-an-ip")
+        var wrongType = valid
+        wrongType["peers"] = .string("Node=192.0.2.2")
+        var invalidPeer = valid
+        invalidPeer["peers"] = .array([.string("Bad=not-an-ip")])
+        let settings = WireGuardWidgetSettings(config: [
+            "profiles": .array([
+                .string("not a profile"),
+                .dictionary(invalid),
+                .dictionary(wrongType),
+                .dictionary(invalidPeer),
+                .dictionary(valid),
+                .dictionary(duplicate),
+            ]),
+        ])
+
+        XCTAssertEqual(settings.profiles, [
+            WireGuardProfile(
+                name: "Office", tunnelName: "office-tunnel", gateway: "192.0.2.1",
+                peers: [WireGuardPeer(name: "Node", address: "192.0.2.2")])
+        ])
+    }
+
+    func testUnusableProfilesFallBackToLegacySettings() {
+        let legacy: ConfigData = [
+            "tunnel-name": .string("Legacy"),
+            "gateway": .string("192.0.2.1"),
+            "peers": .array([.string("Node=192.0.2.2")]),
+        ]
+        for profiles in [
+            TOMLValue.array([]),
+            .string("invalid"),
+            .array([.dictionary(["name": .string("Missing fields")])]),
+        ] {
+            var config = legacy
+            config["profiles"] = profiles
+            XCTAssertEqual(
+                WireGuardWidgetSettings(config: config),
+                WireGuardWidgetSettings(config: legacy))
+        }
+    }
+
+    func testCompactLabelsIncludeProfileNameAndExactStatus() {
+        let profile = WireGuardProfile(
+            name: "Office", tunnelName: "office-tunnel", gateway: "192.0.2.1",
+            peers: [])
+
+        XCTAssertEqual(profile.compactLabel(status: .healthy), "Office UP")
+        XCTAssertEqual(profile.compactLabel(status: .disconnected), "Office OFF")
+        XCTAssertEqual(profile.compactLabel(status: .degraded), "Office PROBE")
+        XCTAssertEqual(profile.compactLabel(status: .checking), "Office CHECK")
     }
 
     func testSCUtilStatusParserUsesTheFirstStatusLine() {

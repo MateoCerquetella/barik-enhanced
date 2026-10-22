@@ -48,6 +48,7 @@ struct WireGuardWidget: View {
 
     var body: some View {
         WireGuardWidgetContent(
+            profile: manager.activeProfile(for: settings),
             status: manager.healthStatus(for: settings),
             onOpenDetails: showDetails)
             .foregroundStyle(.foregroundOutside)
@@ -93,6 +94,7 @@ struct WireGuardWidget: View {
 }
 
 struct WireGuardWidgetContent: View {
+    let profile: WireGuardProfile
     let status: WireGuardHealthStatus
     let onOpenDetails: () -> Void
 
@@ -113,7 +115,7 @@ struct WireGuardWidgetContent: View {
                         .offset(x: 2, y: 1)
                 }
 
-                Text(status.compactLabel)
+                Text(profile.compactLabel(status: status))
                     .font(.system(size: 9, weight: .bold, design: .monospaced))
                     .tracking(0.5)
                     .foregroundStyle(WireGuardPalette.color(for: status))
@@ -121,8 +123,8 @@ struct WireGuardWidgetContent: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("WireGuard \(status.displayName)")
-        .help("WireGuard: \(status.displayName)")
+        .accessibilityLabel("WireGuard \(profile.name) \(status.displayName)")
+        .help("WireGuard \(profile.name): \(status.displayName)")
         .fixedSize(horizontal: true, vertical: false)
     }
 }
@@ -139,7 +141,10 @@ struct WireGuardWidgetContent_Previews: PreviewProvider {
                 ],
                 id: \.displayName
             ) { status in
-                WireGuardWidgetContent(status: status, onOpenDetails: {})
+                WireGuardWidgetContent(
+                    profile: WireGuardWidgetSettings(config: [:]).profiles[0],
+                    status: status,
+                    onOpenDetails: {})
             }
         }
         .padding()

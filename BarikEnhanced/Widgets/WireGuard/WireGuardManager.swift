@@ -6,8 +6,11 @@ final class WireGuardManager: ObservableObject {
 
     @Published private(set) var snapshot: WireGuardSnapshot = .initial
     @Published private(set) var isRefreshing = false
+    @Published private(set) var isChangingTunnel = false
+    @Published private(set) var actionError: String?
 
     private let checker: any WireGuardHealthChecking
+    private let controller: any WireGuardTunnelControlling
     private let workerQueue: DispatchQueue
     private var activeClients: [UUID: WireGuardWidgetSettings] = [:]
     private var activeClientOrder: [UUID] = []
@@ -16,11 +19,14 @@ final class WireGuardManager: ObservableObject {
 
     init(
         checker: any WireGuardHealthChecking = WireGuardHealthChecker(),
+        controller: any WireGuardTunnelControlling =
+            SystemWireGuardTunnelController(),
         workerQueue: DispatchQueue = DispatchQueue(
             label: "com.mateocerquetella.BarikEnhanced.wireguard",
             qos: .utility)
     ) {
         self.checker = checker
+        self.controller = controller
         self.workerQueue = workerQueue
     }
 
@@ -71,8 +77,11 @@ final class WireGuardManager: ObservableObject {
 
         isRefreshing = true
         let checker = self.checker
+        let preferredProfile = snapshot.activeProfile
         workerQueue.async { [weak self] in
-            let result = checker.check(settings: settings)
+            let result = checker.check(
+                settings: settings,
+                preferredProfile: preferredProfile)
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
 
@@ -95,11 +104,48 @@ final class WireGuardManager: ObservableObject {
     func healthStatus(
         for settings: WireGuardWidgetSettings
     ) -> WireGuardHealthStatus {
-        WireGuardHealthStatus.resolve(
+        guard snapshot.checkedAt != nil, snapshot.settings == settings else {
+            return .checking
+        }
+        return WireGuardHealthStatus.resolve(
             tunnelState: snapshot.tunnelState,
-            gatewayProbe: snapshot.gatewayProbe,
-            isChecking: snapshot.checkedAt == nil
-                || snapshot.settings != settings)
+            gatewayProbe: snapshot.gatewayProbe)
+    }
+
+    func activeProfile(for settings: WireGuardWidgetSettings) -> WireGuardProfile {
+        if snapshot.settings == settings, let profile = snapshot.activeProfile {
+            return profile
+        }
+        return settings.profiles[0]
+    }
+
+    func setConnected(_ connected: Bool, profile: WireGuardProfile) {
+        guard !isChangingTunnel,
+            currentSettings?.profiles.contains(profile) == true
+        else {
+            return
+        }
+
+        isChangingTunnel = true
+        actionError = nil
+        let controller = self.controller
+        workerQueue.async { [weak self] in
+            let result = controller.setConnected(
+                connected,
+                tunnelName: profile.tunnelName)
+            let succeeded = result?.terminationStatus == 0
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.isChangingTunnel = false
+                if self.currentSettings?.profiles.contains(profile) == true,
+                    !succeeded
+                {
+                    let action = connected ? "connect" : "disconnect"
+                    self.actionError = "Could not \(action) \(profile.name)."
+                }
+                self.refresh()
+            }
+        }
     }
 
     private var currentSettings: WireGuardWidgetSettings? {

@@ -10,7 +10,12 @@ struct WireGuardPopup: View {
             snapshot: manager.snapshot,
             status: manager.healthStatus(for: settings),
             isRefreshing: manager.isRefreshing,
-            onRefresh: manager.refresh)
+            isChangingTunnel: manager.isChangingTunnel,
+            actionError: manager.actionError,
+            onRefresh: manager.refresh,
+            onSetConnected: { connected, profile in
+                manager.setConnected(connected, profile: profile)
+            })
     }
 }
 
@@ -19,7 +24,10 @@ struct WireGuardPopupContent: View {
     let snapshot: WireGuardSnapshot
     let status: WireGuardHealthStatus
     let isRefreshing: Bool
+    let isChangingTunnel: Bool
+    let actionError: String?
     let onRefresh: () -> Void
+    let onSetConnected: (Bool, WireGuardProfile) -> Void
 
     private var hasCurrentSnapshot: Bool {
         snapshot.settings == settings
@@ -33,17 +41,81 @@ struct WireGuardPopupContent: View {
         hasCurrentSnapshot ? snapshot.gatewayProbe : .unknown
     }
 
+    private var activeProfile: WireGuardProfile {
+        hasCurrentSnapshot
+            ? snapshot.activeProfile ?? settings.profiles[0]
+            : settings.profiles[0]
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
             header
+            profileSection
             connectionPanel
             peerSection
+            if let actionError {
+                Text(actionError)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             probeNotice
             footer
         }
         .frame(width: 370)
         .padding(20)
         .foregroundStyle(.white)
+    }
+
+    private var profileSection: some View {
+        VStack(spacing: 6) {
+            ForEach(settings.profiles) { profile in
+                profileRow(profile)
+            }
+        }
+    }
+
+    private func profileRow(_ profile: WireGuardProfile) -> some View {
+        let state = hasCurrentSnapshot
+            ? snapshot.profileStates.first { $0.profile.id == profile.id }?.state
+                ?? .unknown
+            : WireGuardTunnelState.unknown
+        let connected = state == .connected
+        let canDisconnect = connected || state == .connecting
+        let isActiveConnected = connected && profile.id == activeProfile.id
+
+        return HStack(spacing: 10) {
+            Image(
+                systemName: isActiveConnected
+                    ? "checkmark.circle.fill"
+                    : "circle")
+                .foregroundStyle(isActiveConnected ? .green : .gray)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(profile.name)
+                    .font(.system(size: 12, weight: .semibold))
+                    .lineLimit(1)
+                    .help(profile.tunnelName)
+                Text(state.displayName)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            Button {
+                onSetConnected(!canDisconnect, profile)
+            } label: {
+                Label(
+                    canDisconnect ? "Disconnect" : "Connect",
+                    systemImage: canDisconnect ? "stop.circle" : "play.circle")
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            .buttonStyle(.plain)
+            .disabled(isChangingTunnel)
+            .accessibilityLabel(
+                "\(canDisconnect ? "Disconnect" : "Connect") \(profile.name)")
+        }
+        .padding(10)
+        .background(isActiveConnected ? Color.green.opacity(0.1) : Color.clear)
+        .clipShape(RoundedRectangle(cornerRadius: 7))
     }
 
     private var header: some View {
@@ -86,7 +158,7 @@ struct WireGuardPopupContent: View {
         VStack(spacing: 0) {
             detailRow(
                 label: "TUNNEL",
-                value: settings.tunnelName,
+                value: activeProfile.tunnelName,
                 trailing: displayedTunnelState.displayName,
                 trailingColor: tunnelStateColor)
 
@@ -94,7 +166,7 @@ struct WireGuardPopupContent: View {
 
             detailRow(
                 label: "GATEWAY",
-                value: settings.gateway,
+                value: activeProfile.gateway,
                 trailing: displayedGatewayProbe.displayName,
                 trailingColor: WireGuardPalette.color(
                     for: displayedGatewayProbe))
@@ -140,12 +212,12 @@ struct WireGuardPopupContent: View {
                     .tracking(0.8)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text("\(settings.peers.count)")
+                Text("\(activeProfile.peers.count)")
                     .font(.system(size: 9, weight: .bold, design: .monospaced))
                     .foregroundStyle(.tertiary)
             }
 
-            if settings.peers.isEmpty {
+            if activeProfile.peers.isEmpty {
                 Text("No peer probes configured")
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(.tertiary)
@@ -153,7 +225,7 @@ struct WireGuardPopupContent: View {
                     .padding(.vertical, 10)
             } else {
                 VStack(spacing: 6) {
-                    ForEach(settings.peers) { peer in
+                    ForEach(activeProfile.peers) { peer in
                         peerRow(peer)
                     }
                 }
@@ -274,11 +346,14 @@ struct WireGuardPopupContent_Previews: PreviewProvider {
             ])
         let snapshot = WireGuardSnapshot(
             settings: settings,
-            tunnelState: .connected,
+            activeProfile: settings.profiles[0],
+            profileStates: [
+                WireGuardProfileState(profile: settings.profiles[0], state: .connected)
+            ],
             gatewayProbe: .reachable,
             peerProbes: [
-                WireGuardPeerProbe(peer: settings.peers[0], state: .reachable),
-                WireGuardPeerProbe(peer: settings.peers[1], state: .unreachable),
+                WireGuardPeerProbe(peer: settings.profiles[0].peers[0], state: .reachable),
+                WireGuardPeerProbe(peer: settings.profiles[0].peers[1], state: .unreachable),
             ],
             checkedAt: Date())
 
@@ -287,7 +362,10 @@ struct WireGuardPopupContent_Previews: PreviewProvider {
             snapshot: snapshot,
             status: .healthy,
             isRefreshing: false,
-            onRefresh: {})
+            isChangingTunnel: false,
+            actionError: nil,
+            onRefresh: {},
+            onSetConnected: { _, _ in })
             .background(.black)
             .previewLayout(.sizeThatFits)
     }
