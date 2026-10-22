@@ -38,10 +38,9 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
     private var previousNetworkData: [String: (ibytes: UInt64, obytes: UInt64)] = [:]
     private var lastNetworkUpdate: Date = Date()
 
-    /// Network needs 1 Hz sampling to read as live. CPU and RAM are heavier, so
-    /// they run once every `metricsTickInterval` ticks of that same timer.
-    private static let networkSampleInterval: TimeInterval = 1.0
-    private var metricsTickInterval = 10
+    /// Everything the widgets show is sampled at 1 Hz so CPU, RAM and network
+    /// all read as live on the same timer.
+    private static let sampleInterval: TimeInterval = 1.0
     private var tick = 0
     private var cpuHistorySeeded = false
     private var ramHistorySeeded = false
@@ -55,7 +54,6 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
         label: "com.mateocerquetella.BarikEnhanced.systemmonitor",
         qos: .utility)
 
-    private var currentInterval: TimeInterval = 10.0
     let widgetId = "system-monitor" // This covers both cpuram and networkactivity
     
     private var isActive = false
@@ -75,18 +73,6 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
     }
     
     private func setupNotifications() {
-        // Listen for performance mode changes
-        NotificationCenter.default.addObserver(
-            forName: NSNotification.Name("PerformanceModeChanged"),
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
-            if let intervals = notification.object as? [String: TimeInterval],
-               let newInterval = intervals["system"] {
-                self?.updateTimerInterval(newInterval)
-            }
-        }
-        
         // Listen for widget activation changes
         NotificationCenter.default.addObserver(
             forName: NSNotification.Name("WidgetActivationChanged"),
@@ -123,13 +109,6 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
         }
         
         isActive = true
-        
-        // Get current performance mode interval
-        let performanceManager = PerformanceModeManager.shared
-        let intervals = performanceManager.getTimerIntervals(for: performanceManager.currentMode)
-        currentInterval = intervals["system"] ?? 10.0
-        metricsTickInterval = max(1, Int(currentInterval.rounded()))
-        
         startMonitoring()
     }
     
@@ -139,12 +118,6 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
         stopMonitoring()
     }
     
-    private func updateTimerInterval(_ newInterval: TimeInterval) {
-        guard isActive else { return }
-        currentInterval = newInterval
-        metricsTickInterval = max(1, Int(newInterval.rounded()))
-    }
-
     private func startMonitoring() {
         tick = 0
         cpuHistorySeeded = false
@@ -153,7 +126,7 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
         lastNetworkUpdate = Date()
 
         timer = Timer.scheduledTimer(
-            withTimeInterval: Self.networkSampleInterval,
+            withTimeInterval: Self.sampleInterval,
             repeats: true
         ) { [weak self] _ in
             self?.sampleQueue.async { self?.sample() }
@@ -172,17 +145,10 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
         let fastMode = isFastMode
         autoreleasepool {
             updateNetworkActivity()
-            // The first two ticks give CPU a one-second delta for its first
-            // reading; after that it follows the configured cadence unless the
-            // popup is open.
-            if forceMetrics || fastMode || tick <= 2
-                || tick.isMultiple(of: metricsTickInterval)
-            {
-                updateCPUUsage()
-                updateRAMUsage()
-            }
+            updateCPUUsage()
+            updateRAMUsage()
             // Process scanning spawns `ps`, so it only runs with the popup up
-            // and at half the network rate.
+            // and at half the sample rate.
             if forceMetrics || (fastMode && tick.isMultiple(of: 2)) {
                 updateProcesses()
             }

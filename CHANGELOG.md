@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.8.5 - 2026-10-22
+
+### Improvements
+- **Live CPU/RAM widget**: CPU and RAM now update at 1 Hz with the same sparkline traces as NET I/O. They stay neutral normally and turn yellow at the warning level and red at the critical level, so colour only appears when a value is close to the cap. Traces use a fixed 0-100% scale, so the line height matches the real percentage.
+
 ## 1.8.4 - 2026-10-21
 
 ### New Features

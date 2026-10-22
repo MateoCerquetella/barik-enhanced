@@ -1,77 +1,49 @@
 import SwiftUI
 
+/// Live CPU and RAM readout, matching the NET I/O widget: 1 Hz samples with a
+/// neon trace and a colour that turns yellow/red at the configured thresholds.
 struct CPURAMWidget: View {
     @EnvironmentObject var configProvider: ConfigProvider
     var config: ConfigData { configProvider.config }
-    
-    // Configuration properties
+
     var showIcon: Bool { config["show-icon"]?.boolValue ?? false }
     var cpuWarningLevel: Int { config["cpu-warning-level"]?.intValue ?? 70 }
     var cpuCriticalLevel: Int { config["cpu-critical-level"]?.intValue ?? 90 }
     var ramWarningLevel: Int { config["ram-warning-level"]?.intValue ?? 70 }
     var ramCriticalLevel: Int { config["ram-critical-level"]?.intValue ?? 90 }
-    
+
     @ObservedObject private var systemMonitor = SystemMonitorManager.shared
-    
+
     @State private var rect: CGRect = CGRect()
-    
+
+    /// Neutral until the configured warning/critical level, then yellow/red,
+    /// so colour always means "close to the cap" rather than decoration.
+    private static let neutral = Color.foregroundOutside
+
     var body: some View {
         HStack(spacing: 6) {
             if showIcon {
                 Image(systemName: "cpu")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.foregroundOutside)
+                    .foregroundStyle(Self.neutral.opacity(0.8))
             }
-            
-            VStack(alignment: .leading, spacing: 2) {
-                // CPU Section with mini progress bar
-                HStack(spacing: 4) {
-                    Text("CPU")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(.foregroundOutside.opacity(0.8))
-                    
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(.foregroundOutside.opacity(0.2))
-                            .frame(width: 30, height: 3)
-                        
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(cpuTextColor)
-                            .frame(width: max(2, 30 * systemMonitor.cpuLoad / 100), height: 3)
-                            .animation(.easeInOut(duration: 0.3), value: systemMonitor.cpuLoad)
-                    }
-                    
-                    Text("\(Int(systemMonitor.cpuLoad))%")
-                        .font(.system(size: 9, weight: .medium, design: .monospaced))
-                        .foregroundStyle(cpuTextColor)
-                        .frame(width: 24, alignment: .trailing)
-                }
-                
-                // RAM Section with mini progress bar
-                HStack(spacing: 4) {
-                    Text("RAM")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(.foregroundOutside.opacity(0.8))
-                    
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(.foregroundOutside.opacity(0.2))
-                            .frame(width: 30, height: 3)
-                        
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(ramTextColor)
-                            .frame(width: max(2, 30 * systemMonitor.ramUsage / 100), height: 3)
-                            .animation(.easeInOut(duration: 0.3), value: systemMonitor.ramUsage)
-                    }
-                    
-                    Text("\(Int(systemMonitor.ramUsage))%")
-                        .font(.system(size: 9, weight: .medium, design: .monospaced))
-                        .foregroundStyle(ramTextColor)
-                        .frame(width: 24, alignment: .trailing)
-                }
+
+            VStack(alignment: .leading, spacing: 3) {
+                channel(
+                    title: "CPU",
+                    value: systemMonitor.cpuLoad,
+                    history: systemMonitor.cpuHistory,
+                    color: cpuColor,
+                    active: systemMonitor.cpuLoad >= 1)
+                channel(
+                    title: "RAM",
+                    value: systemMonitor.ramUsage,
+                    history: systemMonitor.ramHistory,
+                    color: ramColor,
+                    active: systemMonitor.ramUsage >= 1)
             }
         }
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 7)
         .padding(.vertical, 4)
         .background(
             GeometryReader { geometry in
@@ -88,32 +60,71 @@ struct CPURAMWidget: View {
         .frame(maxHeight: .infinity)
         .background(.black.opacity(0.001))
         .onTapGesture {
-            MenuBarPopup.show(rect: rect, id: "systemmonitor") { 
-                SystemMonitorPopup() 
+            MenuBarPopup.show(rect: rect, id: "systemmonitor") {
+                SystemMonitorPopup()
             }
         }
+        .help("CPU \(Int(systemMonitor.cpuLoad))% · RAM \(Int(systemMonitor.ramUsage))%")
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            "CPU \(Int(systemMonitor.cpuLoad)) percent, RAM \(Int(systemMonitor.ramUsage)) percent")
     }
-    
-    private var cpuTextColor: Color {
-        let cpu = Int(systemMonitor.cpuLoad)
-        if cpu >= cpuCriticalLevel {
-            return .red
-        } else if cpu >= cpuWarningLevel {
-            return .yellow
-        } else {
-            return .foregroundOutside
+
+    private func channel(
+        title: String,
+        value: Double,
+        history: [Double],
+        color: Color,
+        active: Bool
+    ) -> some View {
+        HStack(spacing: 4) {
+            Text(title)
+                .font(.system(size: 8, weight: .bold, design: .monospaced))
+                .foregroundStyle(color.opacity(0.65))
+                .frame(width: 23, alignment: .leading)
+
+            Text("\(Int(value))%")
+                .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                .foregroundStyle(color)
+                .frame(width: 30, alignment: .trailing)
+
+            LiveTrace(
+                values: Array(history.suffix(14)),
+                color: color,
+                scale: 100)
+                .frame(width: 34, height: 8)
+                .shadow(color: color.opacity(active ? 0.5 : 0.15), radius: 2)
         }
     }
-    
-    private var ramTextColor: Color {
-        let ram = Int(systemMonitor.ramUsage)
-        if ram >= ramCriticalLevel {
+
+    private var cpuColor: Color {
+        thresholdColor(
+            systemMonitor.cpuLoad,
+            warning: cpuWarningLevel,
+            critical: cpuCriticalLevel,
+            normal: Self.neutral)
+    }
+
+    private var ramColor: Color {
+        thresholdColor(
+            systemMonitor.ramUsage,
+            warning: ramWarningLevel,
+            critical: ramCriticalLevel,
+            normal: Self.neutral)
+    }
+
+    private func thresholdColor(
+        _ value: Double,
+        warning: Int,
+        critical: Int,
+        normal: Color
+    ) -> Color {
+        if value >= Double(critical) {
             return .red
-        } else if ram >= ramWarningLevel {
+        } else if value >= Double(warning) {
             return .yellow
-        } else {
-            return .foregroundOutside
         }
+        return normal
     }
 }
 
@@ -124,4 +135,4 @@ struct CPURAMWidget_Previews: PreviewProvider {
             .environmentObject(ConfigProvider(config: [:]))
             .previewLayout(.sizeThatFits)
     }
-} 
+}

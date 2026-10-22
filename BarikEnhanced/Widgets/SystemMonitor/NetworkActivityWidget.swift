@@ -112,15 +112,18 @@ struct NetworkActivityWidget: View {
     }
 }
 
-/// Terminal-style waveform of the last samples, scaled to its own peak.
-private struct LiveTrace: View {
+/// Terminal-style waveform of the last samples.
+struct LiveTrace: View {
     let values: [Double]
     let color: Color
+    /// nil scales to the sample peak (network traffic has no fixed maximum);
+    /// pass a fixed maximum for percentages, so 40% is drawn at 40% height.
+    var scale: Double? = nil
 
     var body: some View {
         Canvas { context, size in
             guard values.count > 1 else { return }
-            let peak = max(values.max() ?? 0, 0.05)
+            let peak = max(scale ?? (values.max() ?? 0), 0.05)
             var path = Path()
             for (index, value) in values.enumerated() {
                 let x = size.width * CGFloat(index) / CGFloat(values.count - 1)
