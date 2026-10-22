@@ -11,6 +11,15 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
 
     @Published var uploadSpeed: Double = 0.0
     @Published var downloadSpeed: Double = 0.0
+
+    /// Rolling samples for the live readout. Network is sampled at 1 Hz, so
+    /// these cover the last 30 seconds; CPU/RAM follow the configured cadence.
+    @Published private(set) var uploadHistory: [Double] = Array(repeating: 0, count: 30)
+    @Published private(set) var downloadHistory: [Double] = Array(repeating: 0, count: 30)
+    @Published private(set) var cpuHistory: [Double] = Array(repeating: 0, count: 30)
+    @Published private(set) var ramHistory: [Double] = Array(repeating: 0, count: 30)
+    @Published private(set) var topCPUProcesses: [TopProcess] = []
+    @Published private(set) var topRAMProcesses: [TopProcess] = []
     
     // Internal CPU breakdown for popup
     @Published var userLoad: Double = 0.0
@@ -28,7 +37,24 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
     private var previousCpuInfoCount: mach_msg_type_number_t = 0
     private var previousNetworkData: [String: (ibytes: UInt64, obytes: UInt64)] = [:]
     private var lastNetworkUpdate: Date = Date()
-    
+
+    /// Network needs 1 Hz sampling to read as live. CPU and RAM are heavier, so
+    /// they run once every `metricsTickInterval` ticks of that same timer.
+    private static let networkSampleInterval: TimeInterval = 1.0
+    private var metricsTickInterval = 10
+    private var tick = 0
+    private var cpuHistorySeeded = false
+    private var ramHistorySeeded = false
+
+    /// While the popup is open, sample CPU and RAM on every tick instead of
+    /// waiting for the configured (battery-friendly) cadence.
+    private let fastModeLock = NSLock()
+    private var fastModeClients = 0
+
+    private let sampleQueue = DispatchQueue(
+        label: "com.mateocerquetella.BarikEnhanced.systemmonitor",
+        qos: .utility)
+
     private var currentInterval: TimeInterval = 10.0
     let widgetId = "system-monitor" // This covers both cpuram and networkactivity
     
@@ -102,6 +128,7 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
         let performanceManager = PerformanceModeManager.shared
         let intervals = performanceManager.getTimerIntervals(for: performanceManager.currentMode)
         currentInterval = intervals["system"] ?? 10.0
+        metricsTickInterval = max(1, Int(currentInterval.rounded()))
         
         startMonitoring()
     }
@@ -115,24 +142,24 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
     private func updateTimerInterval(_ newInterval: TimeInterval) {
         guard isActive else { return }
         currentInterval = newInterval
-        
-        // Restart timer with new interval
-        stopMonitoring()
-        startMonitoring()
+        metricsTickInterval = max(1, Int(newInterval.rounded()))
     }
 
     private func startMonitoring() {
-        // Update every X seconds based on performance mode
-        timer = Timer.scheduledTimer(withTimeInterval: currentInterval, repeats: true) { [weak self] _ in
-            // Run system calls on background queue to avoid blocking UI
-            DispatchQueue.global(qos: .utility).async {
-                self?.updateAllMetrics()
-            }
+        tick = 0
+        cpuHistorySeeded = false
+        ramHistorySeeded = false
+        previousNetworkData = [:]
+        lastNetworkUpdate = Date()
+
+        timer = Timer.scheduledTimer(
+            withTimeInterval: Self.networkSampleInterval,
+            repeats: true
+        ) { [weak self] _ in
+            self?.sampleQueue.async { self?.sample() }
         }
-        // Initial update on background queue
-        DispatchQueue.global(qos: .utility).async {
-            self.updateAllMetrics()
-        }
+        timer?.tolerance = 0.1
+        sampleQueue.async { [weak self] in self?.sample() }
     }
     
     private func stopMonitoring() {
@@ -140,13 +167,48 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
         timer = nil
     }
     
-    private func updateAllMetrics() {
-        // Add safety checks to prevent hanging
+    private func sample(forceMetrics: Bool = false) {
+        tick += 1
+        let fastMode = isFastMode
         autoreleasepool {
-            updateCPUUsage()
-            updateRAMUsage()
             updateNetworkActivity()
+            // The first two ticks give CPU a one-second delta for its first
+            // reading; after that it follows the configured cadence unless the
+            // popup is open.
+            if forceMetrics || fastMode || tick <= 2
+                || tick.isMultiple(of: metricsTickInterval)
+            {
+                updateCPUUsage()
+                updateRAMUsage()
+            }
+            // Process scanning spawns `ps`, so it only runs with the popup up
+            // and at half the network rate.
+            if forceMetrics || (fastMode && tick.isMultiple(of: 2)) {
+                updateProcesses()
+            }
         }
+    }
+
+    /// Called by the system monitor popup: refresh everything on open and keep
+    /// CPU/RAM on the same 1 Hz cadence as the network readout while it is up.
+    func beginLiveUpdates() {
+        fastModeLock.lock()
+        fastModeClients += 1
+        fastModeLock.unlock()
+        guard isActive else { return }
+        sampleQueue.async { [weak self] in self?.sample(forceMetrics: true) }
+    }
+
+    func endLiveUpdates() {
+        fastModeLock.lock()
+        fastModeClients = max(0, fastModeClients - 1)
+        fastModeLock.unlock()
+    }
+
+    private var isFastMode: Bool {
+        fastModeLock.lock()
+        defer { fastModeLock.unlock() }
+        return fastModeClients > 0
     }
     
     // MARK: - CPU Usage (Simple and Safe)
@@ -251,7 +313,14 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
                     self.userLoad = userPercent
                     self.systemLoad = systemPercent
                     self.idleLoad = idlePercent
-                    self.cpuLoad = min(100.0, max(0.0, userPercent + systemPercent))
+                    let total = min(100.0, max(0.0, userPercent + systemPercent))
+                    self.cpuLoad = total
+                    if self.cpuHistorySeeded {
+                        self.cpuHistory = Self.appending(self.cpuHistory, total)
+                    } else {
+                        self.cpuHistory = Array(repeating: total, count: self.cpuHistory.count)
+                        self.cpuHistorySeeded = true
+                    }
                 }
             }
         }
@@ -318,6 +387,12 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
             self.activeRAM = activeMemoryGB
             self.wiredRAM = wiredMemoryGB
             self.compressedRAM = compressedMemoryGB
+            if self.ramHistorySeeded {
+                self.ramHistory = Self.appending(self.ramHistory, ramUsagePercent)
+            } else {
+                self.ramHistory = Array(repeating: ramUsagePercent, count: self.ramHistory.count)
+                self.ramHistorySeeded = true
+            }
         }
     }
     
@@ -375,10 +450,47 @@ class SystemMonitorManager: ObservableObject, ConditionallyActivatableWidget {
             DispatchQueue.main.async {
                 self.uploadSpeed = uploadSpeedMBps
                 self.downloadSpeed = downloadSpeedMBps
+                self.uploadHistory = Self.appending(
+                    self.uploadHistory, uploadSpeedMBps)
+                self.downloadHistory = Self.appending(
+                    self.downloadHistory, downloadSpeedMBps)
             }
         }
         
         previousNetworkData = currentNetworkData
         lastNetworkUpdate = currentTime
+    }
+
+    private static func appending(_ history: [Double], _ value: Double) -> [Double] {
+        var updated = history
+        updated.removeFirst()
+        updated.append(value)
+        return updated
+    }
+
+    // MARK: - Top processes
+
+    private func updateProcesses() {
+        let all = ProcessSampler.sample()
+        guard !all.isEmpty else { return }
+        let byCPU = Array(all.sorted { $0.cpuPercent > $1.cpuPercent }.prefix(8))
+        let byRAM = Array(all.sorted { $0.memoryBytes > $1.memoryBytes }.prefix(8))
+        DispatchQueue.main.async {
+            self.topCPUProcesses = byCPU
+            self.topRAMProcesses = byRAM
+        }
+    }
+
+    /// Sends SIGTERM and refreshes the list shortly after. Returns false when
+    /// the PID is protected or the signal cannot be delivered (root-owned).
+    @discardableResult
+    func kill(process: TopProcess) -> Bool {
+        guard process.id > 1, Darwin.kill(process.id, SIGTERM) == 0 else {
+            return false
+        }
+        sampleQueue.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+            self?.updateProcesses()
+        }
+        return true
     }
 } 

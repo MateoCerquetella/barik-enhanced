@@ -2,12 +2,12 @@ import SwiftUI
 
 struct SystemMonitorPopup: View {
     @ObservedObject private var systemMonitor = SystemMonitorManager.shared
-    @State private var cpuHistory: [Double] = Array(repeating: 0, count: 30)
-    @State private var ramHistory: [Double] = Array(repeating: 0, count: 30)
-    @State private var networkUpHistory: [Double] = Array(repeating: 0, count: 30)
-    @State private var networkDownHistory: [Double] = Array(repeating: 0, count: 30)
-    
-    private let timer = Timer.publish(every: 3, on: .main, in: .common).autoconnect()
+    @State private var liveUpdatesActive = false
+
+    private let willHideWindow = NotificationCenter.default.publisher(
+        for: .willHideWindow)
+    private let willChangeContent = NotificationCenter.default.publisher(
+        for: .willChangeContent)
     
     var body: some View {
         ScrollView {
@@ -22,6 +22,17 @@ struct SystemMonitorPopup: View {
                         .fontWeight(.semibold)
                         .foregroundStyle(.white)
                     Spacer()
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(.green)
+                            .frame(width: 5, height: 5)
+                        Text("LIVE 1s")
+                            .font(.system(
+                                size: 9,
+                                weight: .bold,
+                                design: .monospaced))
+                            .foregroundStyle(.green.opacity(0.85))
+                    }
                     Text(Date(), style: .time)
                         .font(.caption)
                         .foregroundStyle(.gray)
@@ -46,7 +57,7 @@ struct SystemMonitorPopup: View {
                             .fill(.black.opacity(0.3))
                             .frame(height: 60)
                         
-                        CPUChart(data: cpuHistory, color: cpuColor)
+                        CPUChart(data: systemMonitor.cpuHistory, color: cpuColor)
                             .frame(height: 50)
                             .padding(.horizontal, 8)
                     }
@@ -114,7 +125,7 @@ struct SystemMonitorPopup: View {
                             .fill(.black.opacity(0.3))
                             .frame(height: 60)
                         
-                        RAMChart(data: ramHistory, color: ramColor)
+                        RAMChart(data: systemMonitor.ramHistory, color: ramColor)
                             .frame(height: 50)
                             .padding(.horizontal, 8)
                     }
@@ -130,55 +141,44 @@ struct SystemMonitorPopup: View {
                 Divider()
                     .background(.gray.opacity(0.3))
                 
-                // Network Section with Charts
+                // Network Section: terminal-style, 1 Hz live
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Network Activity")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                    
-                    HStack(spacing: 16) {
-                        // Upload
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Image(systemName: "arrow.up.circle.fill")
-                                    .foregroundStyle(.green)
-                                Text("Upload")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.white)
-                                Spacer()
-                            }
-                            
-                            Text(formatSpeed(systemMonitor.uploadSpeed))
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundStyle(.green)
-                            
-                            NetworkMiniChart(data: networkUpHistory, color: .green)
-                                .frame(height: 20)
-                        }
-                        
-                        // Download  
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Image(systemName: "arrow.down.circle.fill")
-                                    .foregroundStyle(.blue)
-                                Text("Download")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.white)
-                                Spacer()
-                            }
-                            
-                            Text(formatSpeed(systemMonitor.downloadSpeed))
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundStyle(.blue)
-                            
-                            NetworkMiniChart(data: networkDownHistory, color: .blue)
-                                .frame(height: 20)
+                    HStack {
+                        Text("NET I/O")
+                            .font(.system(size: 13, weight: .bold, design: .monospaced))
+                            .foregroundStyle(.white)
+                        Spacer()
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(.green)
+                                .frame(width: 4, height: 4)
+                            Text("LIVE · 1s")
+                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .foregroundStyle(.green.opacity(0.8))
                         }
                     }
+
+                    ioChannel(
+                        label: "TX",
+                        glyph: "▲",
+                        speed: systemMonitor.uploadSpeed,
+                        history: systemMonitor.uploadHistory,
+                        color: .green)
+                    ioChannel(
+                        label: "RX",
+                        glyph: "▼",
+                        speed: systemMonitor.downloadSpeed,
+                        history: systemMonitor.downloadHistory,
+                        color: .cyan)
                 }
-                
+
+                Divider()
+                    .background(.gray.opacity(0.3))
+
+                TopProcessSection(
+                    cpuProcesses: systemMonitor.topCPUProcesses,
+                    ramProcesses: systemMonitor.topRAMProcesses,
+                    onKill: { systemMonitor.kill(process: $0) })
                 
             }
         }
@@ -186,13 +186,62 @@ struct SystemMonitorPopup: View {
         .background(.black.opacity(0.9))
         .cornerRadius(12)
         .frame(width: 320)
-        .onReceive(timer) { _ in
-            updateHistory()
-        }
+        .onAppear { startLiveUpdates() }
+        .onDisappear { stopLiveUpdates() }
+        .onReceive(willHideWindow) { _ in stopLiveUpdates() }
+        .onReceive(willChangeContent) { _ in stopLiveUpdates() }
     }
-    
+
+    /// Panels are only ordered out, so `onDisappear` is not guaranteed when the
+    /// popup closes. The window notifications cover that path; the flag keeps
+    /// the client count balanced when both fire.
+    private func startLiveUpdates() {
+        guard !liveUpdatesActive else { return }
+        liveUpdatesActive = true
+        systemMonitor.beginLiveUpdates()
+    }
+
+    private func stopLiveUpdates() {
+        guard liveUpdatesActive else { return }
+        liveUpdatesActive = false
+        systemMonitor.endLiveUpdates()
+    }
+
     private var usedRAM: Double {
         systemMonitor.activeRAM + systemMonitor.wiredRAM + systemMonitor.compressedRAM
+    }
+
+    private func ioChannel(
+        label: String,
+        glyph: String,
+        speed: Double,
+        history: [Double],
+        color: Color
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Text(glyph)
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                Text(label)
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.7))
+                Spacer()
+                Text(formatSpeed(speed))
+                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+            }
+            .foregroundStyle(color)
+
+            NetworkTrace(values: history, color: color)
+                .frame(height: 26)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(color.opacity(0.06))
+        .overlay {
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(color.opacity(0.18), lineWidth: 1)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 6))
     }
     
     private var cpuColor: Color {
@@ -227,22 +276,6 @@ struct SystemMonitorPopup: View {
         }
     }
     
-    private func updateHistory() {
-        // Update CPU history
-        cpuHistory.removeFirst()
-        cpuHistory.append(systemMonitor.cpuLoad)
-        
-        // Update RAM history
-        ramHistory.removeFirst()
-        ramHistory.append(systemMonitor.ramUsage)
-        
-        // Update Network history
-        networkUpHistory.removeFirst()
-        networkUpHistory.append(systemMonitor.uploadSpeed)
-        
-        networkDownHistory.removeFirst()
-        networkDownHistory.append(systemMonitor.downloadSpeed)
-    }
 }
 
 // MARK: - Chart Views
@@ -306,33 +339,47 @@ struct RAMChart: View {
     }
 }
 
-struct NetworkMiniChart: View {
-    let data: [Double]
+struct NetworkTrace: View {
+    let values: [Double]
     let color: Color
-    
+
     var body: some View {
-        GeometryReader { geometry in
-            Path { path in
-                guard !data.isEmpty else { return }
-                
-                let width = geometry.size.width
-                let height = geometry.size.height
-                let stepX = width / CGFloat(data.count - 1)
-                let maxValue = data.max() ?? 1.0
-                
-                for (index, value) in data.enumerated() {
-                    let x = CGFloat(index) * stepX
-                    let normalizedValue = maxValue > 0 ? value / maxValue : 0
-                    let y = height - CGFloat(normalizedValue) * height
-                    
-                    if index == 0 {
-                        path.move(to: CGPoint(x: x, y: y))
-                    } else {
-                        path.addLine(to: CGPoint(x: x, y: y))
-                    }
+        Canvas { context, size in
+            guard values.count > 1 else { return }
+            let peak = max(values.max() ?? 0, 0.05)
+            var path = Path()
+            for (index, value) in values.enumerated() {
+                let x = size.width * CGFloat(index) / CGFloat(values.count - 1)
+                let y = size.height * (1 - CGFloat(min(max(value / peak, 0), 1)))
+                if index == 0 {
+                    path.move(to: CGPoint(x: x, y: y))
+                } else {
+                    path.addLine(to: CGPoint(x: x, y: y))
                 }
             }
-            .stroke(color, style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+
+            var fill = path
+            fill.addLine(to: CGPoint(x: size.width, y: size.height))
+            fill.addLine(to: CGPoint(x: 0, y: size.height))
+            fill.closeSubpath()
+            context.fill(
+                fill,
+                with: .linearGradient(
+                    Gradient(colors: [color.opacity(0.22), color.opacity(0.01)]),
+                    startPoint: .zero,
+                    endPoint: CGPoint(x: 0, y: size.height)))
+
+            context.stroke(
+                path,
+                with: .color(color),
+                style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
+
+            if let last = values.last {
+                let y = size.height * (1 - CGFloat(min(max(last / peak, 0), 1)))
+                context.fill(
+                    Path(ellipseIn: CGRect(x: size.width - 3, y: y - 2, width: 4, height: 4)),
+                    with: .color(color))
+            }
         }
     }
 }

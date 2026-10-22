@@ -164,7 +164,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         newPanel.hasShadow = false
         newPanel.isReleasedWhenClosed = false
         newPanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
-        let hostingView = NSHostingView(rootView: hostingRootView)
+        let hostingView = FirstMouseHostingView(rootView: hostingRootView)
         hostingView.wantsLayer = true
         hostingView.layer?.isOpaque = false
         newPanel.contentView = hostingView
