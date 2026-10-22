@@ -136,7 +136,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let backgroundPanel = createPanel(
                     frame: screenFrame,
                     level: Int(CGWindowLevelForKey(.desktopWindow)),
-                    hostingRootView: AnyView(BackgroundView())
+                    hostingRootView: AnyView(BackgroundView(screen: screen))
                 )
                 let menuBarPanel = createPanel(
                     frame: screenFrame,

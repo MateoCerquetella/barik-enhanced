@@ -15,7 +15,7 @@
 - **Syncthing click target**: The compact widget uses a tap gesture instead of a Button inside the drag source, so a quick click opens the popup.
 - **Background panel collapsed to 0×0**: The disabled background hosting view has no intrinsic size, which collapsed the panel and made the blur impossible to enable later. It now lives in a fixed container.
 - **AeroSpace CLI**: Timed-out commands are killed with SIGKILL and repeated failures pause spawning for a minute, so a wedged AeroSpace cannot leave hung CLI processes behind.
-- **Background blur**: Restore the upstream full-screen `Color.clear + Material` background instead of the rounded pill.
+- **Background blur**: Blur the actual wallpaper with a real Gaussian blur instead of a tinted `Material`; the gray wash was the material, not the image.
 
 ## 1.8.3 - 2026-10-06
 
