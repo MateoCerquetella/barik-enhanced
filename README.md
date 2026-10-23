@@ -1,6 +1,6 @@
 # Barik Enhanced
 
-[![Version](https://img.shields.io/badge/version-1.8.6-blue.svg)](https://github.com/MateoCerquetella/barik-enhanced/releases/tag/v1.8.6)
+[![Version](https://img.shields.io/badge/version-1.8.7-blue.svg)](https://github.com/MateoCerquetella/barik-enhanced/releases/tag/v1.8.7)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![macOS](https://img.shields.io/badge/macOS-14.0%2B-black.svg)](https://github.com/MateoCerquetella/barik-enhanced)
 
@@ -186,7 +186,10 @@ divider
 ```
 
 The WireGuard widget reads every configured macOS tunnel state, follows the first
-connected profile, and can connect or disconnect profiles from its popup. It runs
+connected profile, and can connect, disconnect, or switch profiles from its popup.
+Switching stops other configured tunnels and waits for disconnection before
+starting the selected profile. The compact label shows only UP, OFF, PROBE, or
+CHECK; profile names remain in the popup and tooltip. It runs
 lightweight ICMP reachability probes only for the connected profile's gateway and
 peers. Probe results are diagnostic only; they are
 not authoritative WireGuard or RouterOS handshake data. Existing configurations

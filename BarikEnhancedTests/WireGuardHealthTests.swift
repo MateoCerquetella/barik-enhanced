@@ -29,6 +29,11 @@ final class WireGuardHealthTests: XCTestCase {
                 tunnelState: .unknown,
                 gatewayProbe: .unknown),
             .checking)
+        XCTAssertEqual(
+            WireGuardHealthStatus.resolve(
+                tunnelState: .disconnecting,
+                gatewayProbe: .reachable),
+            .checking)
     }
 
     func testConnectedTunnelProbesGatewayAndEveryPeer() {
@@ -133,8 +138,7 @@ final class WireGuardHealthTests: XCTestCase {
             WireGuardPeerProbe(peer: profiles[1].peers[0], state: .unreachable)
         ])
         XCTAssertEqual(probe.addresses, ["198.51.100.1", "198.51.100.2"])
-        XCTAssertEqual(
-            snapshot.activeProfile?.compactLabel(status: .healthy), "Backup UP")
+        XCTAssertEqual(WireGuardHealthStatus.healthy.compactLabel, "UP")
     }
 
     func testFirstConnectedProfileWinsOverPreferredProfile() {
@@ -170,11 +174,10 @@ final class WireGuardHealthTests: XCTestCase {
             WireGuardPeerProbe(peer: profiles[1].peers[0], state: .unknown)
         ])
         XCTAssertEqual(
-            snapshot.activeProfile?.compactLabel(
-                status: WireGuardHealthStatus.resolve(
-                    tunnelState: snapshot.tunnelState,
-                    gatewayProbe: snapshot.gatewayProbe)),
-            "Backup OFF")
+            WireGuardHealthStatus.resolve(
+                tunnelState: snapshot.tunnelState,
+                gatewayProbe: snapshot.gatewayProbe).compactLabel,
+            "OFF")
         XCTAssertTrue(probe.addresses.isEmpty)
     }
 

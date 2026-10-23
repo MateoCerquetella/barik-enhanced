@@ -1,5 +1,43 @@
 import SwiftUI
 
+enum WireGuardProfileAction: Equatable {
+    case connect
+    case switchProfile
+    case disconnect
+
+    static func resolve(
+        profile: WireGuardProfile,
+        state: WireGuardTunnelState,
+        profileStates: [WireGuardProfileState]
+    ) -> WireGuardProfileAction {
+        if state == .connected || state == .connecting
+            || state == .disconnecting
+        {
+            return .disconnect
+        }
+        return profileStates.contains {
+            $0.profile.id != profile.id
+                && ($0.state == .connected || $0.state == .connecting
+                    || $0.state == .disconnecting)
+        } ? .switchProfile : .connect
+    }
+
+    var title: String {
+        switch self {
+        case .connect:
+            return "Connect"
+        case .switchProfile:
+            return "Switch"
+        case .disconnect:
+            return "Disconnect"
+        }
+    }
+
+    var systemImage: String {
+        self == .disconnect ? "stop.circle" : "play.circle"
+    }
+}
+
 struct WireGuardPopup: View {
     @ObservedObject var manager: WireGuardManager
     let settings: WireGuardWidgetSettings
@@ -81,8 +119,11 @@ struct WireGuardPopupContent: View {
                 ?? .unknown
             : WireGuardTunnelState.unknown
         let connected = state == .connected
-        let canDisconnect = connected || state == .connecting
         let isActiveConnected = connected && profile.id == activeProfile.id
+        let action = WireGuardProfileAction.resolve(
+            profile: profile,
+            state: state,
+            profileStates: hasCurrentSnapshot ? snapshot.profileStates : [])
 
         return HStack(spacing: 10) {
             Image(
@@ -101,17 +142,16 @@ struct WireGuardPopupContent: View {
             }
             Spacer(minLength: 8)
             Button {
-                onSetConnected(!canDisconnect, profile)
+                onSetConnected(action != .disconnect, profile)
             } label: {
                 Label(
-                    canDisconnect ? "Disconnect" : "Connect",
-                    systemImage: canDisconnect ? "stop.circle" : "play.circle")
+                    action.title,
+                    systemImage: action.systemImage)
                     .font(.system(size: 11, weight: .semibold))
             }
             .buttonStyle(.plain)
             .disabled(isChangingTunnel)
-            .accessibilityLabel(
-                "\(canDisconnect ? "Disconnect" : "Connect") \(profile.name)")
+            .accessibilityLabel("\(action.title) \(profile.name)")
         }
         .padding(10)
         .background(isActiveConnected ? Color.green.opacity(0.1) : Color.clear)
@@ -311,7 +351,7 @@ struct WireGuardPopupContent: View {
         switch displayedTunnelState {
         case .connected:
             return .green
-        case .connecting:
+        case .connecting, .disconnecting:
             return .yellow
         case .disconnected:
             return .gray

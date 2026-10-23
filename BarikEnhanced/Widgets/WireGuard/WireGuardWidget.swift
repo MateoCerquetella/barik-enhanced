@@ -115,7 +115,7 @@ struct WireGuardWidgetContent: View {
                         .offset(x: 2, y: 1)
                 }
 
-                Text(profile.compactLabel(status: status))
+                Text(status.compactLabel)
                     .font(.system(size: 9, weight: .bold, design: .monospaced))
                     .tracking(0.5)
                     .foregroundStyle(WireGuardPalette.color(for: status))

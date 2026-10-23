@@ -5,18 +5,22 @@ import XCTest
 final class WireGuardManagerTests: XCTestCase {
     func testControllerPassesExactTunnelNameAsOneArgument() {
         let runner = RecordingWireGuardCommandRunner()
-        let controller = SystemWireGuardTunnelController(commandRunner: runner)
+        let statusProvider = ScriptedTunnelStatusProvider(states: [
+            "Office Tunnel": [.disconnected],
+        ])
+        let controller = SystemWireGuardTunnelController(
+            commandRunner: runner,
+            statusProvider: statusProvider,
+            sleep: { _ in })
+        let office = profile("Office", tunnel: "Office Tunnel")
+        let backup = profile("Backup", tunnel: "Backup; Tunnel")
 
-        XCTAssertEqual(
-            controller.setConnected(true, tunnelName: "Office Tunnel"),
-            runner.result)
-        XCTAssertEqual(
-            controller.setConnected(false, tunnelName: "Backup; Tunnel"),
-            runner.result)
+        XCTAssertTrue(controller.connect(profile: backup, among: [office, backup]))
+        XCTAssertTrue(controller.disconnect(profile: backup))
 
         XCTAssertEqual(runner.executables, ["/usr/sbin/scutil", "/usr/sbin/scutil"])
         XCTAssertEqual(runner.arguments, [
-            ["--nc", "start", "Office Tunnel"],
+            ["--nc", "start", "Backup; Tunnel"],
             ["--nc", "stop", "Backup; Tunnel"],
         ])
     }
@@ -24,9 +28,214 @@ final class WireGuardManagerTests: XCTestCase {
     func testControllerPreservesCommandFailure() {
         let runner = RecordingWireGuardCommandRunner()
         runner.result = nil
-        let controller = SystemWireGuardTunnelController(commandRunner: runner)
+        let controller = SystemWireGuardTunnelController(
+            commandRunner: runner,
+            statusProvider: ScriptedTunnelStatusProvider(states: [:]))
 
-        XCTAssertNil(controller.setConnected(true, tunnelName: "Office Tunnel"))
+        XCTAssertFalse(
+            controller.disconnect(
+                profile: profile("Office", tunnel: "Office Tunnel")))
+    }
+
+    func testSwitchStopsConnectedProfileBeforeStartingTarget() {
+        let runner = RecordingWireGuardCommandRunner()
+        let statuses = ScriptedTunnelStatusProvider(states: [
+            "office-tunnel": [.connected, .connecting, .disconnected],
+        ])
+        let controller = SystemWireGuardTunnelController(
+            commandRunner: runner,
+            statusProvider: statuses,
+            statusCheckDelay: 0,
+            sleep: { _ in })
+        let office = profile("Office", tunnel: "office-tunnel")
+        let backup = profile("Backup", tunnel: "backup-tunnel")
+
+        XCTAssertTrue(controller.connect(profile: backup, among: [office, backup]))
+        XCTAssertEqual(runner.arguments, [
+            ["--nc", "stop", "office-tunnel"],
+            ["--nc", "start", "backup-tunnel"],
+        ])
+        XCTAssertEqual(
+            statuses.queries,
+            ["office-tunnel", "office-tunnel", "office-tunnel"])
+    }
+
+    func testSwitchStopsEveryConfiguredActiveProfileAndLeavesOthersUntouched() {
+        let runner = RecordingWireGuardCommandRunner()
+        let statuses = ScriptedTunnelStatusProvider(states: [
+            "office-tunnel": [.connected, .disconnected],
+            "secondary-tunnel": [.connecting, .disconnected],
+            "inactive-tunnel": [.disconnected],
+            "unconfigured-tunnel": [.connected],
+        ])
+        let controller = SystemWireGuardTunnelController(
+            commandRunner: runner,
+            statusProvider: statuses,
+            sleep: { _ in })
+        let office = profile("Office", tunnel: "office-tunnel")
+        let secondary = profile("Secondary", tunnel: "secondary-tunnel")
+        let inactive = profile("Inactive", tunnel: "inactive-tunnel")
+        let backup = profile("Backup", tunnel: "backup-tunnel")
+
+        XCTAssertTrue(
+            controller.connect(
+                profile: backup,
+                among: [office, secondary, inactive, backup]))
+        XCTAssertEqual(runner.arguments, [
+            ["--nc", "stop", "office-tunnel"],
+            ["--nc", "stop", "secondary-tunnel"],
+            ["--nc", "start", "backup-tunnel"],
+        ])
+        XCTAssertFalse(statuses.queries.contains("unconfigured-tunnel"))
+    }
+
+    func testSwitchDoesNotStartWhenStopCommandFails() {
+        let runner = RecordingWireGuardCommandRunner()
+        runner.result = WireGuardCommandResult(
+            terminationStatus: 1, standardOutput: "", standardError: "Denied")
+        let statuses = ScriptedTunnelStatusProvider(states: [
+            "office-tunnel": [.connected],
+        ])
+        let controller = SystemWireGuardTunnelController(
+            commandRunner: runner,
+            statusProvider: statuses)
+        let office = profile("Office", tunnel: "office-tunnel")
+        let backup = profile("Backup", tunnel: "backup-tunnel")
+
+        XCTAssertFalse(controller.connect(profile: backup, among: [office, backup]))
+        XCTAssertEqual(runner.arguments, [["--nc", "stop", "office-tunnel"]])
+    }
+
+    func testSwitchDoesNotStartWhenDisconnectTimesOut() {
+        let runner = RecordingWireGuardCommandRunner()
+        let statuses = ScriptedTunnelStatusProvider(states: [
+            "office-tunnel": [.connected, .connecting, .connecting],
+        ])
+        let controller = SystemWireGuardTunnelController(
+            commandRunner: runner,
+            statusProvider: statuses,
+            statusCheckAttempts: 2,
+            statusCheckDelay: 0,
+            sleep: { _ in })
+        let office = profile("Office", tunnel: "office-tunnel")
+        let backup = profile("Backup", tunnel: "backup-tunnel")
+
+        XCTAssertFalse(controller.connect(profile: backup, among: [office, backup]))
+        XCTAssertEqual(runner.arguments, [["--nc", "stop", "office-tunnel"]])
+    }
+
+    func testSwitchDoesNotStartWhenStoppedProfileBecomesUnknown() {
+        let runner = RecordingWireGuardCommandRunner()
+        let statuses = ScriptedTunnelStatusProvider(states: [
+            "office-tunnel": [.connected, .unknown],
+        ])
+        let controller = SystemWireGuardTunnelController(
+            commandRunner: runner,
+            statusProvider: statuses,
+            statusCheckDelay: 0,
+            sleep: { _ in })
+        let office = profile("Office", tunnel: "office-tunnel")
+        let backup = profile("Backup", tunnel: "backup-tunnel")
+
+        XCTAssertFalse(controller.connect(profile: backup, among: [office, backup]))
+        XCTAssertEqual(runner.arguments, [["--nc", "stop", "office-tunnel"]])
+    }
+
+    func testSwitchWaitsForAlreadyDisconnectingProfileWithoutStoppingAgain() {
+        let runner = RecordingWireGuardCommandRunner()
+        let statuses = ScriptedTunnelStatusProvider(states: [
+            "office-tunnel": [.disconnecting, .disconnecting, .disconnected],
+        ])
+        let controller = SystemWireGuardTunnelController(
+            commandRunner: runner,
+            statusProvider: statuses,
+            statusCheckDelay: 0,
+            sleep: { _ in })
+        let office = profile("Office", tunnel: "office-tunnel")
+        let backup = profile("Backup", tunnel: "backup-tunnel")
+
+        XCTAssertTrue(controller.connect(profile: backup, among: [office, backup]))
+        XCTAssertEqual(runner.arguments, [["--nc", "start", "backup-tunnel"]])
+    }
+
+    func testSwitchDoesNotStartWhenOtherProfileStateIsUnknown() {
+        let runner = RecordingWireGuardCommandRunner()
+        let statuses = ScriptedTunnelStatusProvider(states: [
+            "office-tunnel": [.unknown],
+        ])
+        let controller = SystemWireGuardTunnelController(
+            commandRunner: runner,
+            statusProvider: statuses)
+        let office = profile("Office", tunnel: "office-tunnel")
+        let backup = profile("Backup", tunnel: "backup-tunnel")
+
+        XCTAssertFalse(controller.connect(profile: backup, among: [office, backup]))
+        XCTAssertTrue(runner.arguments.isEmpty)
+    }
+
+    func testUnknownProfilePreventsPartialSwitch() {
+        let runner = RecordingWireGuardCommandRunner()
+        let statuses = ScriptedTunnelStatusProvider(states: [
+            "office-tunnel": [.connected],
+            "unknown-tunnel": [.unknown],
+        ])
+        let controller = SystemWireGuardTunnelController(
+            commandRunner: runner,
+            statusProvider: statuses)
+        let office = profile("Office", tunnel: "office-tunnel")
+        let unknown = profile("Unknown", tunnel: "unknown-tunnel")
+        let backup = profile("Backup", tunnel: "backup-tunnel")
+
+        XCTAssertFalse(
+            controller.connect(
+                profile: backup,
+                among: [office, unknown, backup]))
+        XCTAssertTrue(runner.arguments.isEmpty)
+    }
+
+    func testConnectSkipsStopWhenOtherProfilesAreDisconnected() {
+        let runner = RecordingWireGuardCommandRunner()
+        let statuses = ScriptedTunnelStatusProvider(states: [
+            "office-tunnel": [.disconnected],
+        ])
+        let controller = SystemWireGuardTunnelController(
+            commandRunner: runner,
+            statusProvider: statuses)
+        let office = profile("Office", tunnel: "office-tunnel")
+        let backup = profile("Backup", tunnel: "backup-tunnel")
+
+        XCTAssertTrue(controller.connect(profile: backup, among: [office, backup]))
+        XCTAssertEqual(runner.arguments, [["--nc", "start", "backup-tunnel"]])
+    }
+
+    func testPopupActionSwitchesOnlyWhenAnotherProfileIsActive() {
+        let office = profile("Office", tunnel: "office-tunnel")
+        let backup = profile("Backup", tunnel: "backup-tunnel")
+
+        XCTAssertEqual(
+            WireGuardProfileAction.resolve(
+                profile: backup,
+                state: .disconnected,
+                profileStates: [
+                    WireGuardProfileState(profile: office, state: .connected),
+                    WireGuardProfileState(profile: backup, state: .disconnected),
+                ]),
+            .switchProfile)
+        XCTAssertEqual(
+            WireGuardProfileAction.resolve(
+                profile: backup,
+                state: .disconnected,
+                profileStates: [
+                    WireGuardProfileState(profile: office, state: .disconnected),
+                    WireGuardProfileState(profile: backup, state: .disconnected),
+                ]),
+            .connect)
+        XCTAssertEqual(
+            WireGuardProfileAction.resolve(
+                profile: office,
+                state: .connected,
+                profileStates: []),
+            .disconnect)
     }
 
     @MainActor
@@ -36,7 +245,7 @@ final class WireGuardManagerTests: XCTestCase {
         let checker = ActionAwareWireGuardChecker(runner: runner)
         let manager = WireGuardManager(
             checker: checker,
-            controller: SystemWireGuardTunnelController(commandRunner: runner))
+            controller: controller(runner: runner))
         let clientID = UUID()
         defer { manager.deactivate(clientID: clientID) }
         let initial = expectation(description: "Initial refresh")
@@ -75,6 +284,7 @@ final class WireGuardManagerTests: XCTestCase {
             checker.preferredProfiles.map { $0?.name },
             preferredNames)
         XCTAssertEqual(runner.arguments, [
+            ["--nc", "stop", "office-tunnel"],
             ["--nc", "start", "backup-tunnel"],
             ["--nc", "stop", "backup-tunnel"],
         ])
@@ -89,7 +299,7 @@ final class WireGuardManagerTests: XCTestCase {
         let checker = ActionAwareWireGuardChecker(runner: runner)
         let manager = WireGuardManager(
             checker: checker,
-            controller: SystemWireGuardTunnelController(commandRunner: runner))
+            controller: controller(runner: runner))
         let clientID = UUID()
         defer { manager.deactivate(clientID: clientID) }
         let initial = expectation(description: "Initial refresh")
@@ -120,6 +330,28 @@ final class WireGuardManagerTests: XCTestCase {
             WireGuardProfile(
                 name: "Backup", tunnelName: "backup-tunnel", gateway: "198.51.100.1", peers: []),
         ])
+    }
+
+    private func controller(
+        runner: RecordingWireGuardCommandRunner
+    ) -> SystemWireGuardTunnelController {
+        SystemWireGuardTunnelController(
+            commandRunner: runner,
+            statusProvider: ScriptedTunnelStatusProvider(states: [
+                "office-tunnel": [.connected, .disconnected],
+            ]),
+            sleep: { _ in })
+    }
+
+    private func profile(
+        _ name: String,
+        tunnel: String
+    ) -> WireGuardProfile {
+        WireGuardProfile(
+            name: name,
+            tunnelName: tunnel,
+            gateway: "192.0.2.1",
+            peers: [])
     }
 }
 
@@ -166,5 +398,28 @@ private final class ActionAwareWireGuardChecker: WireGuardHealthChecking {
             gatewayProbe: connectedTunnel == nil ? .unknown : .reachable,
             peerProbes: [],
             checkedAt: Date())
+    }
+}
+
+private final class ScriptedTunnelStatusProvider:
+    WireGuardTunnelStatusProviding
+{
+    private var states: [String: [WireGuardTunnelState]]
+    private(set) var queries: [String] = []
+
+    init(states: [String: [WireGuardTunnelState]]) {
+        self.states = states
+    }
+
+    func status(forTunnelNamed tunnelName: String) -> WireGuardTunnelState {
+        queries.append(tunnelName)
+        guard var tunnelStates = states[tunnelName],
+            !tunnelStates.isEmpty
+        else {
+            return .unknown
+        }
+        let state = tunnelStates.removeFirst()
+        states[tunnelName] = tunnelStates
+        return state
     }
 }

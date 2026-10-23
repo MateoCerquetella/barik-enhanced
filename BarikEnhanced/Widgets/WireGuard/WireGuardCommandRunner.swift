@@ -113,7 +113,9 @@ final class SystemWireGuardTunnelStatusProvider:
             return .connected
         case "connecting":
             return .connecting
-        case "disconnected", "disconnecting":
+        case "disconnecting":
+            return .disconnecting
+        case "disconnected":
             return .disconnected
         default:
             return .unknown
@@ -192,7 +194,9 @@ final class SystemWireGuardTunnelStatusProvider:
             return .connected
         case .connecting:
             return .connecting
-        case .disconnected, .disconnecting:
+        case .disconnecting:
+            return .disconnecting
+        case .disconnected:
             return .disconnected
         default:
             return .unknown
@@ -252,29 +256,101 @@ protocol WireGuardHealthChecking {
 }
 
 protocol WireGuardTunnelControlling {
-    func setConnected(
-        _ connected: Bool,
-        tunnelName: String
-    ) -> WireGuardCommandResult?
+    func connect(
+        profile: WireGuardProfile,
+        among profiles: [WireGuardProfile]
+    ) -> Bool
+    func disconnect(profile: WireGuardProfile) -> Bool
 }
 
 final class SystemWireGuardTunnelController: WireGuardTunnelControlling {
     private let commandRunner: any WireGuardCommandRunning
+    private let statusProvider: any WireGuardTunnelStatusProviding
+    private let statusCheckAttempts: Int
+    private let statusCheckDelay: TimeInterval
+    private let sleep: (TimeInterval) -> Void
 
     init(
         commandRunner: any WireGuardCommandRunning =
-            ProcessWireGuardCommandRunner()
+            ProcessWireGuardCommandRunner(),
+        statusProvider: (any WireGuardTunnelStatusProviding)? = nil,
+        statusCheckAttempts: Int = 8,
+        statusCheckDelay: TimeInterval = 0.25,
+        sleep: @escaping (TimeInterval) -> Void = {
+            Thread.sleep(forTimeInterval: $0)
+        }
     ) {
         self.commandRunner = commandRunner
+        self.statusProvider = statusProvider
+            ?? SystemWireGuardTunnelStatusProvider(commandRunner: commandRunner)
+        self.statusCheckAttempts = statusCheckAttempts
+        self.statusCheckDelay = statusCheckDelay
+        self.sleep = sleep
     }
 
-    func setConnected(
-        _ connected: Bool,
-        tunnelName: String
-    ) -> WireGuardCommandResult? {
+    func connect(
+        profile: WireGuardProfile,
+        among profiles: [WireGuardProfile]
+    ) -> Bool {
+        let otherStates = profiles
+            .filter { $0.id != profile.id }
+            .map {
+                (
+                    profile: $0,
+                    state: statusProvider.status(
+                        forTunnelNamed: $0.tunnelName)
+                )
+            }
+        guard otherStates.allSatisfy({ $0.state != .unknown }) else {
+            return false
+        }
+
+        for other in otherStates {
+            switch other.state {
+            case .connected, .connecting:
+                guard disconnect(profile: other.profile),
+                    waitUntilDisconnected(other.profile)
+                else {
+                    return false
+                }
+            case .disconnecting:
+                guard waitUntilDisconnected(other.profile) else {
+                    return false
+                }
+            case .disconnected, .unknown:
+                continue
+            }
+        }
+
+        return run(
+            action: "start",
+            tunnelName: profile.tunnelName)
+    }
+
+    func disconnect(profile: WireGuardProfile) -> Bool {
+        run(action: "stop", tunnelName: profile.tunnelName)
+    }
+
+    private func waitUntilDisconnected(_ profile: WireGuardProfile) -> Bool {
+        for attempt in 0..<statusCheckAttempts {
+            switch statusProvider.status(forTunnelNamed: profile.tunnelName) {
+            case .disconnected:
+                return true
+            case .unknown:
+                return false
+            case .connected, .connecting, .disconnecting:
+                if attempt + 1 < statusCheckAttempts {
+                    sleep(statusCheckDelay)
+                }
+            }
+        }
+        return false
+    }
+
+    private func run(action: String, tunnelName: String) -> Bool {
         commandRunner.run(
             executable: "/usr/sbin/scutil",
-            arguments: ["--nc", connected ? "start" : "stop", tunnelName])
+            arguments: ["--nc", action, tunnelName])?.terminationStatus == 0
     }
 }
 

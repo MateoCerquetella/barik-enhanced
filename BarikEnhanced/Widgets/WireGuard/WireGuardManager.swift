@@ -121,7 +121,8 @@ final class WireGuardManager: ObservableObject {
 
     func setConnected(_ connected: Bool, profile: WireGuardProfile) {
         guard !isChangingTunnel,
-            currentSettings?.profiles.contains(profile) == true
+            let settings = currentSettings,
+            settings.profiles.contains(profile)
         else {
             return
         }
@@ -129,11 +130,11 @@ final class WireGuardManager: ObservableObject {
         isChangingTunnel = true
         actionError = nil
         let controller = self.controller
+        let profiles = settings.profiles
         workerQueue.async { [weak self] in
-            let result = controller.setConnected(
-                connected,
-                tunnelName: profile.tunnelName)
-            let succeeded = result?.terminationStatus == 0
+            let succeeded = connected
+                ? controller.connect(profile: profile, among: profiles)
+                : controller.disconnect(profile: profile)
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
                 self.isChangingTunnel = false

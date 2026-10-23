@@ -5,6 +5,7 @@ enum WireGuardTunnelState: Equatable {
     case connected
     case disconnected
     case connecting
+    case disconnecting
     case unknown
 
     var displayName: String {
@@ -15,6 +16,8 @@ enum WireGuardTunnelState: Equatable {
             return "Disconnected"
         case .connecting:
             return "Connecting"
+        case .disconnecting:
+            return "Disconnecting"
         case .unknown:
             return "Unknown"
         }
@@ -65,7 +68,7 @@ enum WireGuardHealthStatus: Equatable {
             }
         case .disconnected:
             return .disconnected
-        case .connecting, .unknown:
+        case .connecting, .disconnecting, .unknown:
             return .checking
         }
     }
@@ -147,10 +150,6 @@ struct WireGuardProfile: Identifiable, Equatable {
     let peers: [WireGuardPeer]
 
     var id: String { tunnelName }
-
-    func compactLabel(status: WireGuardHealthStatus) -> String {
-        "\(name) \(status.compactLabel)"
-    }
 
     static func parse(_ config: ConfigData) -> WireGuardProfile? {
         guard

@@ -159,15 +159,11 @@ final class WireGuardSettingsTests: XCTestCase {
         }
     }
 
-    func testCompactLabelsIncludeProfileNameAndExactStatus() {
-        let profile = WireGuardProfile(
-            name: "Office", tunnelName: "office-tunnel", gateway: "192.0.2.1",
-            peers: [])
-
-        XCTAssertEqual(profile.compactLabel(status: .healthy), "Office UP")
-        XCTAssertEqual(profile.compactLabel(status: .disconnected), "Office OFF")
-        XCTAssertEqual(profile.compactLabel(status: .degraded), "Office PROBE")
-        XCTAssertEqual(profile.compactLabel(status: .checking), "Office CHECK")
+    func testCompactLabelsContainOnlyExactStatus() {
+        XCTAssertEqual(WireGuardHealthStatus.healthy.compactLabel, "UP")
+        XCTAssertEqual(WireGuardHealthStatus.disconnected.compactLabel, "OFF")
+        XCTAssertEqual(WireGuardHealthStatus.degraded.compactLabel, "PROBE")
+        XCTAssertEqual(WireGuardHealthStatus.checking.compactLabel, "CHECK")
     }
 
     func testSCUtilStatusParserUsesTheFirstStatusLine() {
@@ -185,6 +181,13 @@ final class WireGuardSettingsTests: XCTestCase {
                     standardOutput: "Disconnected\n",
                     standardError: "")),
             .disconnected)
+        XCTAssertEqual(
+            SystemWireGuardTunnelStatusProvider.parseSCUtilStatus(
+                WireGuardCommandResult(
+                    terminationStatus: 0,
+                    standardOutput: "Disconnecting\n",
+                    standardError: "")),
+            .disconnecting)
         XCTAssertEqual(
             SystemWireGuardTunnelStatusProvider.parseSCUtilStatus(
                 WireGuardCommandResult(

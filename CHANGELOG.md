@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.8.7 - 2026-10-23
+
+### Improvements
+- **Compact WireGuard status**: The menu-bar label shows only UP, OFF, PROBE, or CHECK. Profile names remain in the popup and tooltip.
+- **One-click profile switching**: Switch from the popup without manually disconnecting first. Barik stops other configured tunnels and waits for disconnection before starting the selected profile. A failed or uncertain disconnect prevents the new connection and reports an error.
+
 ## 1.8.6 - 2026-10-22
 
 ### New Features
