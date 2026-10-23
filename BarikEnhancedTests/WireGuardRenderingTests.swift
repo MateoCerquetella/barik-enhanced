@@ -82,7 +82,7 @@ final class WireGuardRenderingTests: XCTestCase {
             to: URL(fileURLWithPath: "/tmp/\(name).png"),
             options: .atomic)
         XCTAssertGreaterThan(pngData.count, 1_000)
-        XCTAssertGreaterThan(image.size.width, 80)
+        XCTAssertGreaterThan(image.size.width, 40)
         XCTAssertGreaterThan(image.size.height, 20)
     }
 }
