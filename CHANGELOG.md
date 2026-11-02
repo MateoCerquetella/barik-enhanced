@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.9.0 - 2026-11-02
+
+### New Features
+- **OmniWM spaces**: `default.spaces` now drives OmniWM (`omniwmctl`) alongside yabai and AeroSpace, including focusing a space or a window inside it. Set `omniwm.path` when `omniwmctl` is not in the app bundle or in a Homebrew prefix.
+
+### Bug Fixes
+- **Menu bar CPU burn**: The NET I/O widget no longer runs a `repeatForever` animation while traffic is flowing. The pulse was active for anything above 1 KB/s, so the perpetual animation kept the menu bar item re-laying out at display refresh rate the whole time the machine was online — measured at ~100% of a CPU core plus ~80% of WindowServer for three days straight. The glyph now fades once when traffic starts or stops and the 1 Hz trace carries the motion; the app idles at 1–2%.
+
 ## 1.8.7 - 2026-10-23
 
 ### Improvements

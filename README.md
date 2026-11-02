@@ -19,7 +19,7 @@ Right-click the menu bar or click the gear icon to open the visual configurator.
 
 | Widget | Description |
 |--------|-------------|
-| **Spaces** | Window manager integration (yabai/AeroSpace) |
+| **Spaces** | Window manager integration (yabai/AeroSpace/OmniWM) |
 | **Now Playing** | Current song with album art (Spotify/Apple Music) |
 | **Weather** | Live temperature and forecast via Open-Meteo (no API key) |
 | **CPU & RAM** | System resource usage with color-coded alerts |
@@ -77,7 +77,7 @@ Build and run with Xcode (Cmd+R).
 ### Requirements
 - macOS 14.0+
 - Xcode 15+
-- A window manager like [AeroSpace](https://github.com/nikitabobko/AeroSpace) or [yabai](https://github.com/koekeishiya/yabai) (optional, for Spaces widget)
+- A window manager like [AeroSpace](https://github.com/nikitabobko/AeroSpace), [yabai](https://github.com/koekeishiya/yabai) or OmniWM (optional, for Spaces widget)
 
 ## Configuration
 
