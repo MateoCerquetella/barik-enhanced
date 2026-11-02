@@ -53,6 +53,8 @@ struct AnySpace: Identifiable, Equatable {
     init<S: SpaceModel>(_ space: S) {
         if let aero = space as? AeroSpace {
             self.id = aero.workspace
+        } else if let omni = space as? OmniWMSpace {
+            self.id = omni.workspace
         } else if let yabai = space as? YabaiSpace {
             self.id = String(yabai.id)
         } else {

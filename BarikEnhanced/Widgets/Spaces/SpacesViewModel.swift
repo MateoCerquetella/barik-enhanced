@@ -17,6 +17,7 @@ class SpacesViewModel: ObservableObject, ConditionallyActivatableWidget {
     private enum ProviderKind: Equatable {
         case yabai
         case aerospace
+        case omniwm
     }
 
     private init() {
@@ -227,6 +228,8 @@ class SpacesViewModel: ObservableObject, ConditionallyActivatableWidget {
             AnySpacesProvider(YabaiSpacesProvider())
         case .aerospace:
             AnySpacesProvider(AerospaceSpacesProvider())
+        case .omniwm:
+            AnySpacesProvider(OmniWMSpacesProvider())
         case .none:
             nil
         }
@@ -241,6 +244,10 @@ class SpacesViewModel: ObservableObject, ConditionallyActivatableWidget {
 
         if runningApps.contains("yabai") {
             return .yabai
+        }
+
+        if runningApps.contains("omniwm") {
+            return .omniwm
         }
 
         if runningApps.contains("aerospace") {

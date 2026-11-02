@@ -5,6 +5,7 @@ struct RootToml: Decodable {
     var theme: String?
     var yabai: YabaiConfig?
     var aerospace: AerospaceConfig?
+    var omniwm: OmniWMConfig?
     var experimental: ExperimentalConfig?
     var monitors: MonitorsConfig?
     var widgets: WidgetsSection
@@ -13,6 +14,7 @@ struct RootToml: Decodable {
         self.theme = nil
         self.yabai = nil
         self.aerospace = nil
+        self.omniwm = nil
         self.monitors = nil
         self.widgets = WidgetsSection(displayed: [], others: [:])
     }
@@ -35,6 +37,10 @@ struct Config {
 
     var aerospace: AerospaceConfig {
         rootToml.aerospace ?? AerospaceConfig()
+    }
+
+    var omniwm: OmniWMConfig {
+        rootToml.omniwm ?? OmniWMConfig()
     }
 
     var experimental: ExperimentalConfig {
@@ -259,6 +265,25 @@ struct AerospaceConfig: Decodable {
             self.path = "/usr/local/bin/aerospace"
         } else {
             self.path = "/opt/homebrew/bin/aerospace"
+        }
+    }
+}
+
+struct OmniWMConfig: Decodable {
+    let path: String
+
+    init() {
+        // omniwmctl ships inside the app bundle; Homebrew installs it to
+        // /opt/homebrew/bin as well.
+        let appPath = "/Applications/OmniWM.app/Contents/MacOS/omniwmctl"
+        if FileManager.default.fileExists(atPath: appPath) {
+            self.path = appPath
+        } else if FileManager.default.fileExists(atPath: "/opt/homebrew/bin/omniwmctl") {
+            self.path = "/opt/homebrew/bin/omniwmctl"
+        } else if FileManager.default.fileExists(atPath: "/usr/local/bin/omniwmctl") {
+            self.path = "/usr/local/bin/omniwmctl"
+        } else {
+            self.path = appPath
         }
     }
 }
