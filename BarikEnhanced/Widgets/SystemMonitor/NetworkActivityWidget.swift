@@ -70,11 +70,12 @@ struct NetworkActivityWidget: View {
                 .font(.system(size: 7, weight: .bold, design: .monospaced))
                 .foregroundStyle(color)
                 .opacity(active ? 1 : 0.35)
-                .animation(
-                    active
-                        ? .easeInOut(duration: 0.7).repeatForever(autoreverses: true)
-                        : .easeOut(duration: 0.2),
-                    value: active)
+                // No perpetual pulse here: a repeating animation makes the
+                // whole menu bar item re-layout at display refresh rate for as
+                // long as there is traffic, which costs a CPU core and a large
+                // WindowServer share. The glyph fades once when traffic starts
+                // or stops instead, and the 1 Hz trace carries the motion.
+                .animation(.easeOut(duration: 0.2), value: active)
 
             Text(compactSpeed(speed))
                 .font(.system(size: 9, weight: .semibold, design: .monospaced))
