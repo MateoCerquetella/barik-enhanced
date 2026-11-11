@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.9.1 - 2026-11-11
+
+### Bug Fixes
+- **Universal release build**: The published 1.9.0 ZIP contained an x86_64-only executable, so Apple Silicon Macs had to run it through Rosetta. Release builds now ship `arm64` and `x86_64` slices again.
+
+### Documentation
+- **WireGuard tunnel names**: Documented that `tunnel-name` must match the macOS service name from `scutil --nc list`. A tunnel renamed in the WireGuard app needs the same name in the widget configuration before its state can be reported.
+
 ## 1.9.0 - 2026-11-02
 
 ### New Features

@@ -1,6 +1,6 @@
 # Barik Enhanced
 
-[![Version](https://img.shields.io/badge/version-1.8.7-blue.svg)](https://github.com/MateoCerquetella/barik-enhanced/releases/tag/v1.8.7)
+[![Version](https://img.shields.io/badge/version-1.9.1-blue.svg)](https://github.com/MateoCerquetella/barik-enhanced/releases/tag/v1.9.1)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![macOS](https://img.shields.io/badge/macOS-14.0%2B-black.svg)](https://github.com/MateoCerquetella/barik-enhanced)
 
@@ -193,7 +193,10 @@ CHECK; profile names remain in the popup and tooltip. It runs
 lightweight ICMP reachability probes only for the connected profile's gateway and
 peers. Probe results are diagnostic only; they are
 not authoritative WireGuard or RouterOS handshake data. Existing configurations
-without `profiles` continue to operate as one legacy profile.
+without `profiles` continue to operate as one legacy profile. Each `tunnel-name`
+must match the macOS service name shown by `scutil --nc list`, so a tunnel
+renamed in the WireGuard app needs the matching name here before its state can
+be reported.
 
 The Syncthing widget reads the configured node's REST API. It shows the selected
 folder's completion against the named peer and the queried Syncthing process's
